@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/ai-usage.mjs\" --tool codex" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/ai-usage.mjs\" --tool codex" }] }
+    ]
+  }
+}

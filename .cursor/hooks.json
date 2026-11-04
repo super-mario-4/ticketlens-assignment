@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [{ "command": "node .claude/hooks/ai-usage.mjs --tool cursor" }]
+  }
+}

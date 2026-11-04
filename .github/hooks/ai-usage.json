@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "hooks": {
+    "userPromptSubmitted": [{ "type": "command", "command": "node .claude/hooks/ai-usage.mjs --tool copilot", "cwd": "." }]
+  }
+}

@@ -1,33 +1,42 @@
 #!/usr/bin/env node
-// SessionStart / SessionEnd / UserPromptSubmit hook (.claude/settings.json):
-// records what a candidate sends Claude in their copy of this repo, never
-// Claude's replies, never what agents, other sessions, background tasks or
-// headless runs send, as
-//   ai-usage/<YYYY-MM-DD>_<session id, 8 chars>.jsonl
-// with one {ts, project, branch, source, prompt} line per prompt, secrets
-// masked, and an "end" line with the session's cost, tokens per model, time and
-// lines changed so far (what /cost shows, its agents' included). The file is
-// staged, so it goes into the candidate's next commit.
+// Records what a candidate sends an AI coding tool in their copy of this repo,
+// never the tool's replies, as
+//   ai-usage/<YYYY-MM-DD>_<tool>_<session id, 8 chars>.jsonl
+// with one {ts, project, branch, prompt, ...} line per prompt, secrets masked,
+// and, where the tool keeps them, an "end" line with the session's usage so far.
+// The file is staged, so it goes into the candidate's next commit. Tools no hook
+// reaches are logged by hand, or by the agent itself, in ai-usage/manual.md
+// (see AGENTS.md and README.md).
 //
-// Each copy records only the sessions opened in that checkout, so a candidate's
-// repo holds their prompts and nobody else's, even with several candidates on
-// one machine. The template itself (origin mohirdev-ai-projects/ticketlens-assignment,
-// or no origin yet) records nothing: the author's sessions never ship.
+// Each copy records only its own sessions, so a candidate's repo holds their
+// prompts and nobody else's, even with several candidates on one machine. The
+// template itself (origin mohirdev-ai-projects/ticketlens-assignment, or no
+// origin yet) records nothing: the author's sessions never ship.
 //
-// Everything comes from Claude Code's own transcripts, which mark where each
-// prompt came from. Claude Code writes a prompt down only after this hook
-// returns, so the hook only starts a detached run that waits a moment, then
-// rebuilds the file of every session opened here. No node, no git: nothing is
-// saved and nothing is shown.
+// Claude Code (.claude/settings.json: SessionStart, SessionEnd, UserPromptSubmit):
+// everything comes from its own transcripts, which mark where each prompt came
+// from, so what agents, other sessions, background tasks or headless runs send
+// is left out, and the end line has the cost, tokens per model, time and lines
+// changed (what /cost shows, its agents' included). It writes a prompt down only
+// after this hook returns, so the hook only starts a detached run that waits a
+// moment, then rebuilds the file of every session opened here.
+//
+// Cursor (.cursor/hooks.json: beforeSubmitPrompt), Codex CLI (.codex/hooks.json:
+// UserPromptSubmit, Stop), Gemini CLI (.gemini/settings.json: BeforeAgent) and
+// Copilot CLI (.github/hooks/ai-usage.json: userPromptSubmitted) run it with
+// --tool <name>: the prompt comes in the hook's input. Only Codex's transcript
+// keeps token totals; the others record prompts and, where given, the model.
+//
+// No node, no git: nothing is saved and nothing is shown. A hook never blocks.
 //
 // Named ai-usage.mjs, not track-prompts.mjs: Mohirdev's own track-prompts.mjs
 // uploads the sessions of any checkout that commits a file by that name.
 //
 // `node .claude/hooks/ai-usage.mjs --self-test` checks the masking, the template
-// check and how a transcript becomes a session file.
-import { mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs"
+// check and how each tool's input becomes a session file.
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { execFileSync, spawn } from "node:child_process"
-import { homedir } from "node:os"
+import { homedir, tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import assert from "node:assert/strict"
@@ -131,10 +140,14 @@ function hook() {
   spawn(process.execPath, [SELF, "--sync", h.transcript_path], { detached: true, stdio: "ignore", windowsHide: true }).unref()
 }
 
+// The candidate's copy: not the template, nor the author's copy before it is pushed.
+const recording = (origin) => Boolean(origin) && !TEMPLATE.test(origin)
+const projectOf = (origin) => origin.split(/[/:]/).pop().replace(/\.git$/, "")
+
 function sync(transcript) {
   const origin = git(REPO, "remote", "get-url", "origin")
-  if (!origin || TEMPLATE.test(origin)) return // the template, or the author's copy before it is pushed
-  const project = origin.split(/[/:]/).pop().replace(/\.git$/, "")
+  if (!recording(origin)) return
+  const project = projectOf(origin)
   // Every Claude config dir here (~/.claude, ~/.claude-2, the session's own):
   // a session is recorded whichever one it ran under. Each transcript folder of
   // this checkout and its subfolders is read once, however many dirs link to it.
@@ -147,7 +160,7 @@ function sync(transcript) {
       const s = session(readFileSync(join(dir, f), "utf8").split("\n"), project)
       // Opened in this checkout: not a sibling folder, a worktree or a nested repo, which record their own.
       if (!s || real(git(s.cwd, "rev-parse", "--show-toplevel")) !== REPO) continue
-      const path = join(OUT, `${s.date}_${f.slice(0, 8)}.jsonl`)
+      const path = join(OUT, `${s.date}_claude_${f.slice(0, 8)}.jsonl`)
       let old = null
       try { old = readFileSync(path, "utf8") } catch {}
       if (old === s.text) continue
@@ -158,6 +171,55 @@ function sync(transcript) {
   // ponytail: an add that loses the index lock to the candidate's own git command is retried by the next run.
   git(REPO, "add", "--", "ai-usage")
 }
+
+// Another tool's hook input. The field names differ per tool; these cover all four.
+function fields(h) {
+  const t = new Date(h.timestamp ?? NaN) // Gemini: ISO string, Copilot: epoch ms, the others: none
+  return {
+    id: String(h.session_id ?? h.sessionId ?? h.conversation_id ?? "").replace(/[^\w-]/g, "").slice(0, 8),
+    ts: (Number.isNaN(t.getTime()) ? new Date() : t).toISOString(),
+    model: h.model || undefined,
+    prompt: typeof h.prompt === "string" && h.prompt.trim() ? h.prompt : null,
+  }
+}
+
+// Codex's transcript keeps running token totals, the last one counts. The other
+// tools' transcripts keep none, or aren't JSONL: null.
+function tokenUsage(transcript) {
+  let text = ""
+  try { text = readFileSync(transcript, "utf8") } catch { return null }
+  const last = text.split("\n").findLast((l) => l.includes('"token_count"'))
+  return parse(last ?? "")?.payload?.info?.total_token_usage ?? null
+}
+
+// The session file with this event's prompt added and its end line replaced.
+function update(text, { ts, model, prompt }, base, usage) {
+  const lines = text.split("\n").map(parse).filter((r) => r && r.type !== "end")
+  if (prompt) lines.push({ ts, ...base, model, prompt: mask(prompt) })
+  if (usage) lines.push({ type: "end", ts, model, usage })
+  return lines.map((l) => JSON.stringify(l) + "\n").join("")
+}
+
+function record(tool, h) {
+  const f = fields(h)
+  const origin = git(REPO, "remote", "get-url", "origin")
+  if (!f.id || !recording(origin)) return
+  const tag = `_${tool}_${f.id}.jsonl`
+  const path = join(OUT, ls(OUT).find((n) => n.endsWith(tag)) ?? `${localDate(new Date(f.ts))}${tag}`)
+  let old = ""
+  try { old = readFileSync(path, "utf8") } catch {}
+  const base = { project: projectOf(origin), branch: git(REPO, "rev-parse", "--abbrev-ref", "HEAD"), tool }
+  const text = update(old, f, base, tokenUsage(h.transcript_path))
+  if (text === old) return
+  mkdirSync(OUT, { recursive: true })
+  writeFileSync(path, text)
+  git(REPO, "add", "--", "ai-usage")
+}
+
+// What each tool wants back. Cursor: let the prompt through. Gemini, and Codex's
+// Stop: JSON only. Codex's UserPromptSubmit: nothing, its stdout becomes context.
+const reply = (tool, h) =>
+  tool === "cursor" ? '{"continue":true}' : tool === "gemini" || h.hook_event_name === "Stop" ? "{}" : ""
 
 function selfTest() {
   const secrets = [
@@ -212,10 +274,48 @@ function selfTest() {
   assert.equal(session(transcript.filter((l) => !l.includes("cost-state")), "x").text.includes('"type":"end"'), false) // no totals yet
   assert.equal(session(transcript.map((l) => l.replaceAll('"entrypoint":"cli"', '"entrypoint":"sdk-cli"')), "x"), null) // headless
   assert.equal(session(transcript.filter((l) => !l.includes('"kind":"human"')), "x"), null) // no person wrote in it
+
+  // Each tool's hook input, as its docs give it.
+  const inputs = {
+    cursor: { conversation_id: "c0ffee12-3456", generation_id: "g1", model: "gpt-5", hook_event_name: "beforeSubmitPrompt", workspace_roots: ["/w"], user_email: "x@y.z", prompt: "add a test" },
+    codex: { session_id: "01a0f1d7-65f8", turn_id: "t1", cwd: "/w", hook_event_name: "UserPromptSubmit", model: "gpt-5.5", prompt: "add a test" },
+    gemini: { session_id: "9f8e7d6c-5b4a", timestamp: at(1), cwd: "/w", hook_event_name: "BeforeAgent", prompt: "add a test" },
+    copilot: { sessionId: "5a5a5a5a-0000", timestamp: Date.parse(at(1)), cwd: "/w", prompt: "add a test" },
+  }
+  assert.deepEqual(Object.values(inputs).map((h) => fields(h).id), ["c0ffee12", "01a0f1d7", "9f8e7d6c", "5a5a5a5a"])
+  assert.equal(fields(inputs.gemini).ts, at(1))
+  assert.equal(fields(inputs.copilot).ts, at(1))
+  assert.equal(fields(inputs.cursor).model, "gpt-5")
+  assert.equal(fields({ session_id: "s", hook_event_name: "Stop" }).prompt, null)
+  assert.deepEqual(Object.keys(inputs).map((tool) => reply(tool, inputs[tool])), ['{"continue":true}', "", "{}", ""])
+  assert.equal(reply("codex", { hook_event_name: "Stop" }), "{}")
+
+  // Prompts accumulate, masked; the end line is replaced, never repeated.
+  const base = { project: "ticketlens", branch: "main", tool: "codex" }
+  const one = update("", { ...fields(inputs.codex), prompt: `use ${secrets[0]}` }, base, { total_tokens: 10 })
+  const two = update(one, fields(inputs.codex), base, { total_tokens: 25 })
+  const rows = two.trim().split("\n").map((l) => JSON.parse(l))
+  assert.deepEqual(rows.map((r) => r.prompt ?? r.usage.total_tokens), ["use [REDACTED]", "add a test", 25])
+  assert.equal(rows[0].model, "gpt-5.5")
+  assert.equal(update(two, fields({ session_id: "s" }), base, null), two.split("\n").slice(0, 2).join("\n") + "\n") // a Stop with no totals: prompts stay
+
+  const box = mkdtempSync(join(tmpdir(), "ai-usage-"))
+  const rollout = join(box, "rollout.jsonl")
+  const tokens = (n) => JSON.stringify({ type: "event_msg", payload: { type: "token_count", info: { total_token_usage: { total_tokens: n } } } })
+  writeFileSync(rollout, [JSON.stringify({ type: "session_meta" }), tokens(5), tokens(9), JSON.stringify({ type: "response_item" })].join("\n"))
+  assert.deepEqual(tokenUsage(rollout), { total_tokens: 9 })
+  writeFileSync(rollout, JSON.stringify({ messages: [] }, null, 2)) // a transcript that keeps no totals
+  assert.equal(tokenUsage(rollout), null)
+  assert.equal(tokenUsage(null), null)
+  rmSync(box, { recursive: true, force: true })
   console.log("ai-usage self-test: ok")
 }
 
 const [mode, arg] = process.argv.slice(2)
 if (mode === "--self-test") selfTest()
 else if (mode === "--sync") setTimeout(() => { try { sync(arg) } catch {} }, WAIT)
-else try { hook() } catch {} // never in Claude's way
+else if (mode === "--tool") {
+  let h = {}
+  try { h = JSON.parse(readFileSync(0, "utf8")); record(arg, h) } catch {} // never in the tool's way
+  process.stdout.write(reply(arg, h))
+} else try { hook() } catch {} // never in Claude's way

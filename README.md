@@ -10,8 +10,10 @@ Welcome! This repository contains everything you need for the 5-day TicketLens a
 | `TASK.md` | The full task description and requirements | **No** |
 | `data/tickets.csv` | Sample dataset (~2,000 support tickets) | **No** |
 | `docs/ai-log.md` | Your AI agent usage log (template) | **Yes — you must fill it in** |
-| `.claude/hooks/ai-usage.mjs` | Records your Claude Code prompts into `ai-usage/` | **No** |
-| `ai-usage/` | Your Claude Code prompts and session costs, one file per session | **No — it is written for you** |
+| `.claude/`, `.cursor/`, `.codex/`, `.gemini/`, `.github/hooks/` | Hooks that record your AI prompts into `ai-usage/` (script: `.claude/hooks/ai-usage.mjs`) | **No** — you may add settings, but keep the hooks |
+| `ai-usage/*.jsonl` | Your prompts in Claude Code, Cursor, Codex CLI, Gemini CLI and Copilot CLI, one file per session | **No — written for you** |
+| `ai-usage/manual.md` | Prompts and usage from any other AI (other agents, chat apps) | **Yes — add to it, never delete** |
+| `AGENTS.md` | Instructions for AI agents, starting with the AI usage rule | **Yes — below that section** |
 
 Everything else (code, specs, configs, tests) is yours to create.
 
@@ -51,7 +53,10 @@ Everything else (code, specs, configs, tests) is yours to create.
 - **Commit often**, with clear messages. We read the history, not only the final state.
 - **Do not rewrite history**: no force-push, no squashing your commits into one at the end.
 - **Keep `docs/ai-log.md` up to date.** Add an entry for every meaningful AI agent session, and commit it together with the work that session produced. Do not write the log at the end from memory.
-- **Your Claude Code prompts are recorded in your repository.** When you use Claude Code here, `.claude/hooks/ai-usage.mjs` saves every prompt you type and each session's cost to `ai-usage/` (secrets masked, Claude's replies not included) and stages it, so it goes into your next commit. Do not edit, delete or disable it. Other agents (Codex, Cursor, …) are not recorded: cover them in `docs/ai-log.md`.
+- **Every prompt you give an AI is recorded in your repository**, in `ai-usage/`, and staged so it goes into your next commit. Do not edit, delete or disable any of it.
+  - **Claude Code, Cursor, Codex CLI, Gemini CLI, GitHub Copilot CLI:** recorded automatically by the hooks in this repository (secrets masked, the AI's replies not included). Trust the hooks when your tool asks: accept the folder-trust prompt, and in Codex also run `/hooks` and trust them. Claude Code and Codex record usage too; for Cursor, Gemini CLI and Copilot CLI, add each session's usage to `ai-usage/manual.md`.
+  - **Any other AI agent:** `AGENTS.md` tells it to log your prompts in `ai-usage/manual.md`. Check that it does.
+  - **Chat apps** (ChatGPT, Claude, Gemini, … in a browser or on a phone) **and anything else:** add every prompt to `ai-usage/manual.md` yourself, in the format shown there, with the usage the app shows.
 - **Never commit secrets.** Keep the LLM API key in a local `.env` file (it is already in `.gitignore`) and provide a `.env.example`.
 
 ## Deadlines

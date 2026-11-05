@@ -1,6 +1,5 @@
 # ADR-0002: PostgreSQL asosiy ombor, Elasticsearch qidiruv uchun
 
-- **Holat:** Accepted
 - **Sana:** 2026-11-05
 - **Tegishli hujjatlar:** PRD 5–9-bo‘limlar, TRD 2–6-bo‘limlar
 

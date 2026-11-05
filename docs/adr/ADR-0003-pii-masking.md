@@ -1,6 +1,5 @@
 # ADR-0003: Maxfiy ma’lumotlarni saqlashdan oldin maskalash
 
-- **Holat:** Accepted
 - **Sana:** 2026-11-05
 - **Tegishli hujjatlar:** PRD 5, 6, 9–11-bo‘limlar, TRD 4, 5, 8-bo‘limlar
 

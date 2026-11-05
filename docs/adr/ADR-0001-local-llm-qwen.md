@@ -1,6 +1,5 @@
 # ADR-0001: MVP uchun lokal LLM tanlash
 
-- **Holat:** Accepted
 - **Sana:** 2026-11-05
 - **Tegishli hujjatlar:** PRD 5–9-bo‘limlar, TRD 2, 7, 9, 13-bo‘limlar
 

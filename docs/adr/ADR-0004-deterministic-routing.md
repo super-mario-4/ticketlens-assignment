@@ -1,6 +1,5 @@
 # ADR-0004: Deterministic Rule-Based Ticket Routing
 
-- **Status:** Accepted
 - **Date:** 2026-11-05
 
 ## Context

@@ -1,8 +1,8 @@
 # TicketLens – PRD
 
-**Product Requirements Document** \| Versiya 4.0 \| Holat: qoralama
+**Product Requirements Document**
 
-*“(taklif)” belgisi qo‘yilgan qiymatlar dastlabki variant bo‘lib, stakeholder bilan tasdiqlanishi kerak.*
+_“(taklif)” belgisi qo‘yilgan qiymatlar dastlabki variant bo‘lib, stakeholder bilan tasdiqlanishi kerak._
 
 # 1. Tizim haqida (Product Overview)
 
@@ -91,7 +91,7 @@ Yechim: AI har bir murojaatni kategoriya va ustuvorlik bo‘yicha tasniflaydi, q
 Kategoriyalar namuna dataset (tickets.csv) asosida belgilandi. Datasetda funksiya so‘rovlari va mazmunsiz xabarlar ham uchragani uchun feature_request va other qo‘shildi.
 
 | **Kategoriya**        | **Tavsif**                                                                |
-|-----------------------|---------------------------------------------------------------------------|
+| --------------------- | ------------------------------------------------------------------------- |
 | payments_transfers    | O‘tkazma yetib bormasligi, pul yechilib ketishi, ikki marta yechilishi    |
 | technical_issues      | Ilova xatolari, oq ekran, QR to‘lov, ilovaning yopilib qolishi            |
 | account_access        | Parol, SMS-kod, akkauntga kira olmaslik                                   |
@@ -120,7 +120,7 @@ Kategoriyalar namuna dataset (tickets.csv) asosida belgilandi. Datasetda funksiy
 Ustuvorlik kategoriyaga emas, murojaat mazmuniga qarab belgilanadi. “Срочно”, “tezroq javob bering” kabi so‘zlar ustuvorlikni o‘zi oshirmaydi.
 
 | **Daraja** | **Qachon beriladi**                                                   | **Misol**                                                            |
-|------------|-----------------------------------------------------------------------|----------------------------------------------------------------------|
+| ---------- | --------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Critical   | Firibgarlik, ruxsatsiz pul yechilishi, karta xavfsizligiga tahdid     | Mijoz SMS-kodni bergan va pulidan ayrilgan; karta yo‘qolgan          |
 | High       | Moliyaviy zarar yoki muhim operatsiyaning bajarilmasligi              | Pul jo‘natilgan, lekin yetib bormagan; pul ikki marta yechilgan      |
 | Medium     | Xizmatdan foydalanishga xalaqit beradi, lekin xavfsizlik tahdidi yo‘q | Ilovaga kira olmaslik, karta bloklanishi, identifikatsiya kechikishi |
@@ -129,7 +129,7 @@ Ustuvorlik kategoriyaga emas, murojaat mazmuniga qarab belgilanadi. “Сроч�
 ## Jamoalarga yo‘naltirish (jamoa nomlari taklif)
 
 | **Kategoriya**        | **Jamoa**                            |
-|-----------------------|--------------------------------------|
+| --------------------- | ------------------------------------ |
 | payments_transfers    | Payments                             |
 | technical_issues      | Tech Support                         |
 | account_access        | Account Support                      |
@@ -162,7 +162,7 @@ Operator bunday murojaatni ko‘rib chiqadi, kategoriya, ustuvorlik va jamoani b
 # 9. Muvaffaqiyat mezonlari (Success Criteria)
 
 | **Mezon**                            | **Maqsad (taklif)**                                                                                           |
-|--------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
 | Etalon to‘plam                       | O‘zimiz qo‘lda belgilagan kamida 50 ta ticket; barcha tillar, kategoriyalar va noaniq holatlar qamrab olinadi |
 | Kategoriya aniqligi                  | ≥ 85% (alohida o‘lchanadi)                                                                                    |
 | Ustuvorlik aniqligi                  | ≥ 80% (alohida o‘lchanadi)                                                                                    |
@@ -180,7 +180,7 @@ Operator noto‘g‘ri tasniflarni tuzata olishi mezon emas, funksional talab (F
 Support rahbari bildirgan talablar bo‘yicha qarorlar:
 
 | **№** | **Talab**                                                        | **Qaror va sabab**                                                                                                                                                                                                                                                                                 |
-|-------|------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ----- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1     | Har bir ticket avtomatik tasniflanib, to‘g‘ri jamoaga yuborilsin | Qabul qilinadi (MVP). Mazmunsiz, noaniq va shubhali murojaatlar bundan mustasno: ularni “taxmin qilish” noto‘g‘ri yo‘naltirishga olib keladi, shuning uchun qo‘lda tekshiriladi.                                                                                                                   |
 | 2     | Har bir ticket uchun qisqa xulosa                                | Qabul qilinadi (MVP). Mazmunsiz murojaatlar uchun xulosa yaratilmaydi.                                                                                                                                                                                                                             |
 | 3     | Barcha xabarlar, karta raqamlari bilan, doimiy saqlansin         | Rad etiladi. Karta raqami, CVV va pasportni saqlash xavfsizlik va maxfiylik xavfi, CVV’ni saqlash umuman mumkin emas (namuna datasetning o‘zida ular bor). Maskalangan matn va operator tuzatishlari tarixi cheklangan muddat saqlanadi (taklif: 90 kun); audit uchun shu yetarli deb hisoblanadi. |
@@ -193,7 +193,7 @@ Support rahbari bildirgan talablar bo‘yicha qarorlar:
 Quyidagilar stakeholder’ga savol sifatida yuboriladi. Javob kelmasa, ko‘rsatilgan taxmin bilan ishlanadi.
 
 | **Savol**                                                                                                         | **Taxmin**                       |
-|-------------------------------------------------------------------------------------------------------------------|----------------------------------|
+| ----------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | Kompaniyadagi haqiqiy jamoalar ro‘yxati qanday?                                                                   | 7-bo‘limdagi jamoalar            |
 | Audit uchun nima kerak: asl matnmi yoki maskalangan matn va tuzatishlar tarixi yetarlimi? Saqlash muddati qancha? | Maskalangan matn yetarli, 90 kun |
 | Birinchi javob vaqti qayerda qayd etiladi va undan o‘lchash uchun foydalanish mumkinmi?                           | Mumkin emas, MVP’da o‘lchanmaydi |

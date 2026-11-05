@@ -190,8 +190,6 @@ Support rahbari bildirgan talablar bo‘yicha qarorlar:
 
 # 11. Taxminlar va ochiq savollar
 
-Quyidagilar stakeholder’ga savol sifatida yuboriladi. Javob kelmasa, ko‘rsatilgan taxmin bilan ishlanadi.
-
 | **Savol**                                                                                                         | **Taxmin**                       |
 | ----------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | Kompaniyadagi haqiqiy jamoalar ro‘yxati qanday?                                                                   | 7-bo‘limdagi jamoalar            |

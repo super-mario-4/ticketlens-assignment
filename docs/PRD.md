@@ -68,7 +68,7 @@ Yechim: AI har bir murojaatni kategoriya va ustuvorlik bo‘yicha tasniflaydi, q
 
 **F3.** AI orqali kategoriya, ustuvorlik va ishonch darajasini aniqlash. O‘zbek (lotin va kirill), rus va aralash matnlar, shuningdek lotin harfida yozilgan ruscha matn qo‘llab-quvvatlanadi.
 
-**F4.** Har bir murojaat uchun qisqa xulosa (o‘zbek tilida, taklif).
+**F4.** Har bir murojaat uchun qisqa xulosa (o‘zbek tilida, taklif); AI’ga yuborilmagan murojaatlar bundan mustasno (10-bo‘lim, №2).
 
 **F5.** Murojaatni kategoriyasiga qarab tegishli jamoaga yo‘naltirish. MVP’da “yuborish” ticketga jamoa biriktirish va uni navbatda jamoa bo‘yicha ko‘rsatishni anglatadi; tashqi tizimga yetkazish yo‘q.
 
@@ -169,7 +169,7 @@ Operator bunday murojaatni ko‘rib chiqadi, kategoriya, ustuvorlik va jamoani b
 | Kategoriya aniqligi                  | ≥ 85% (alohida o‘lchanadi)                                                                                    |
 | Ustuvorlik aniqligi                  | ≥ 80% (alohida o‘lchanadi)                                                                                    |
 | Critical murojaatlarni topish        | ≥ 95%: firibgarlik holatlari o‘tkazib yuborilmasligi kerak                                                    |
-| Maxfiylik                            | AI so‘rovlarida va bazada asl karta raqami, CVV va pasport yo‘q                                               |
+| Maxfiylik                            | AI so‘rovlarida, bazada, qidiruv indeksida va loglarda asl karta raqami, CVV, karta muddati, pasport va telefon yo‘q |
 | Qo‘lda tekshirishga tushganlar       | ≤ 15%                                                                                                         |
 | Yo‘naltirish vaqti                   | Murojaat tushganidan jamoaga yo‘naltirilgunga qadar o‘rtacha 1 daqiqadan kam                                  |
 | Birinchi javob vaqti (uzoq muddatli) | 9 soatdan 1 soatdan kamga tushishiga hissa qo‘shish; tizim ishga tushgandan keyin kuzatiladi                  |

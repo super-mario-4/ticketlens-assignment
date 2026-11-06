@@ -5,7 +5,7 @@
 
 ## Kontekst
 
-TicketLens ticketlarni saqlashi, qayta ishlashi, operator tuzatishlari va audit tarixini yuritishi kerak. Operatorlar esa ko‘p tilli ticket matnlaridan qidirishi kerak.
+TicketLens ticketlarni saqlashi, qayta ishlashi va operator tuzatishlari tarixini yuritishi kerak. Operatorlar esa ko‘p tilli ticket matnlaridan qidirishi kerak.
 
 Kutilayotgan yuklama kuniga taxminan 3 000 ta murojaat.
 
@@ -18,7 +18,7 @@ PostgreSQL tizimning asosiy ma’lumotlar ombori bo‘ladi. Elasticsearch faqat 
 - Ticketlar, importlar, tasniflar va tuzatishlar PostgreSQL'da saqlanadi.
 - Ishlov navbati PostgreSQL orqali boshqariladi.
 - Elasticsearch faqat maskalangan ticket matnini indekslaydi.
-- Elasticsearch'dan olingan ID'lar bo‘yicha yakuniy ma’lumot PostgreSQL'dan olinadi.
+- Elasticsearch'dan olingan ID'lar bo‘yicha filtr, sahifalash va yakuniy ma’lumot PostgreSQL'da bajariladi.
 - Indekslashdagi xatolar `search_index_outbox` orqali qayta ishlanadi.
 - Retention muddati tugaganda ikkala tizimdagi tegishli ma’lumotlar o‘chiriladi.
 

@@ -1,6 +1,6 @@
 # TicketLens – TRD
 
-_Bu hujjat GitHub’ga yuklangan `docs/PRD.md` ga asoslangan. F1–F12 – PRD’dagi funksional talablar. “(taklif)” belgisi qo‘yilgan qiymatlar dastlabki taxmin bo‘lib, benchmark yoki dataset tekshiruvi bilan tasdiqlanadi. MVP’da standart LLM — Docker Compose’dagi `llm` servisi (Ollama) orqali Qwen3.6-35B-A3B._
+_Bu hujjat GitHub’ga yuklangan `docs/PRD.md` ga asoslangan. F1–F12 – PRD’dagi funksional talablar. “(taklif)” belgisi qo‘yilgan qiymatlar dastlabki taxmin bo‘lib, benchmark yoki dataset tekshiruvi bilan tasdiqlanadi. MVP’da standart LLM — Docker Compose’dagi `llm` servisi (Ollama) orqali Qwen3.6-35B-A3B; bu runtime muallif tasdig‘ini kutmoqda (ADR-0001)._
 
 # 1. Texnik maqsad
 
@@ -15,7 +15,7 @@ TicketLens – CSV fayldan mijoz murojaatlarini (ticketlarni) qabul qilib, matnn
 | F3, F4 | AI tasnif va xulosa                     | `worker` → LLM servisi, JSON sxema bilan                     |
 | F5     | Jamoaga yo‘naltirish                    | `routing.yaml` (kategoriya → jamoa), LLM tanlamaydi          |
 | F6     | Navbat tartibi                          | SQL: ustuvorlik darajasi, keyin `created_at`                 |
-| F7     | Operator tuzatishi                      | `corrections` jadvali + audit                                |
+| F7     | Operator tuzatishi                      | `corrections` jadvali (kim va qachon bilan)                  |
 | F8     | Qidiruv va filtr                        | Elasticsearch (matn) + PostgreSQL (filtr)                    |
 | F9     | Maskalangan matn va xulosani ko‘rsatish | Ticket tafsilotlari sahifasi                                 |
 | F10    | Noaniq murojaatlar                      | `needs_review` holati + sabab kodi                           |
@@ -61,8 +61,8 @@ Topshiriq talabiga ko‘ra ro‘yxatdan kamida bitta yangi texnologiya ishlatila
 
 **Qanday ishlatiladi:**
 
-- Indeks maydoni `text_norm`: kichik harfga o‘tkazish va apostrof turlarini birlashtirish. Kirill-lotin transliteratsiyasi qidiruvda qo‘llansa, u alohida normalizatsiya qatlami sifatida testlanadi; asl maskalangan matn o‘zgartirilmaydi.
-- Qidiruv ES’dan ichki `ticket_id` ro‘yxatini relevantlik bo‘yicha qaytaradi; natijalar sahifalanadi. Dastlabki sahifa hajmi 50 ta, maksimal `size` 100 ta (taklif). PostgreSQL qolgan filtr va yakuniy ticket ma’lumotlari uchun asosiy manba bo‘ladi.
+- Indeks maydoni `text_norm`: kichik harfga o‘tkazish, apostrof turlarini birlashtirish va kirill-lotin transliteratsiyasi; “kartam” so‘zi uchun so‘z boshi bo‘yicha moslashuv (edge n-gram) ishlatiladi. Transliteratsiya alohida normalizatsiya qatlami sifatida testlanadi; asl maskalangan matn o‘zgartirilmaydi.
+- Qidiruv ES’dan relevantlik bo‘yicha ko‘pi bilan 1 000 ta ichki `ticket_id` oladi (taklif). Filtr va sahifalash shu ro‘yxat ustida PostgreSQL’da bajariladi, relevantlik tartibi saqlanadi; shunda filtrdan keyin ham sahifa va jami son to‘g‘ri chiqadi. Dastlabki sahifa hajmi 50 ta, maksimal `size` 100 ta (taklif). Yakuniy ticket ma’lumotlari uchun asosiy manba PostgreSQL.
 - ES’ga faqat maskalangan matn indekslanadi.
 - ES indekslash muvaffaqiyatsiz bo‘lsa, PostgreSQL’dagi ticket saqlanib qoladi. `search_index_outbox` jadvalida `pending/failed` vazifa qayd etiladi va worker qayta urinadi. UI’da indekslanish holati ko‘rinishi shart emas, lekin xato loglanadi.
 - 90 kunlik retention muddati tugaganda PostgreSQL yozuvlari bilan birga ES hujjatlari ham o‘chiriladi.
@@ -110,13 +110,12 @@ flowchart TD
 
 | Jadval                | Asosiy maydonlar                                                                                                                                                                                                                                                             |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `import_jobs`         | `id`, `filename`, `status`, `total`, `inserted`, `skipped`, `errors` (JSON), `created_by`, `created_at`                                                                                                                                                                      |
-| `tickets`             | `id` (ichki UUID primary key), `source_ticket_id` (CSV’dagi `id`), `channel`, `created_at` (murojaat vaqti), `customer_id`, `text_masked` (`masking_error` holatida bo‘sh), `status`, `review_reason`, `injection_flag`, `attempts`, `import_job_id`, `ingested_at`, `processing_started_at`, `classified_at` |
+| `import_jobs`         | `id`, `filename`, `status`, `total`, `inserted`, `skipped`, `errors` (JSON: faqat qator ID va xato kodi, ticket matni emas), `created_by`, `created_at`                                                                                                                                                                      |
+| `tickets`             | `id` (ichki UUID primary key), `source_ticket_id` (CSV’dagi `id`), `channel`, `created_at` (murojaat vaqti), `customer_id`, `text_masked` (`masking_error` holatida bo‘sh), `status`, `review_reason`, `attempts`, `import_job_id`, `ingested_at`, `processing_started_at`, `classified_at` |
 | `classifications`     | `id`, `ticket_id`, `model`, `prompt_version`, `category`, `priority`, `confidence`, `summary`, `team`, `latency_ms`, `input_tokens`, `output_tokens`, `created_at` (AI natijasi, o‘zgarmaydi)                                                                                |
 | `corrections`         | `id`, `ticket_id`, `old_category`, `new_category`, `old_priority`, `new_priority`, `old_team`, `new_team` (`old_*` AI natijasi bo‘lmaganda bo‘sh), `reason` (ixtiyoriy), `corrected_by`, `corrected_at` (har bir tuzatish alohida, append-only tarix)                                                                |
 | `search_index_outbox` | `id`, `ticket_id`, `operation`, `status`, `attempts`, `last_error`, `created_at`, `processed_at` (ES indekslashni qayta urinish uchun)                                                                                                                                       |
 | `users`               | `id`, `username`, `password_hash`, `role` (`operator` / `lead`)                                                                                                                                                                                                              |
-| `audit_log`           | `id`, `username`, `action`, `entity`, `entity_id`, `at`                                                                                                                                                                                                                          |
 
 **Holatlar (`tickets.status`):** `pending` → `processing` → `classified` yoki `needs_review`. Operator tasnifni tuzatsa, ticketning asosiy holati `classified` bo‘lib qoladi; tuzatish mavjudligi `corrections` jadvalidan aniqlanadi. Shu tariqa `corrected` ishlov holati bilan aralashtirilmaydi. Operator `needs_review` ticketni belgilasa, ticket `classified` holatiga o‘tadi, `review_reason` esa statistika uchun saqlanib qoladi.
 
@@ -142,7 +141,9 @@ flowchart TD
 
 **Rollar (taklif):** `operator` – ko‘rish, import, tuzatish; `lead` – ko‘rish va statistika. Foydalanuvchilar muhit o‘zgaruvchilaridan yaratiladi, parollar hash qilinadi.
 
-**Navbat tartibi:** ustuvorlik (Critical, High, Medium, Low), keyin `created_at` (eskisi birinchi). `needs_review` alohida ro‘yxat. Operator tuzatishi `corrections` jadvaliga yangi yozuv qo‘shadi; oldingi tuzatishlar o‘chirilmaydi.
+**Amaldagi qiymat:** ticketning kategoriyasi, ustuvorligi va jamoasi eng so‘nggi `corrections` yozuvidan, u bo‘lmasa eng so‘nggi `classifications` yozuvidan olinadi. Navbat, filtr va statistika shu qiymat bilan ishlaydi.
+
+**Navbat tartibi:** ustuvorlik (Critical, High, Medium, Low), keyin `created_at` (eskisi birinchi). `needs_review` alohida ro‘yxat, `created_at` bo‘yicha, eskisi birinchi (taklif). Operator tuzatishi `corrections` jadvaliga yangi yozuv qo‘shadi; oldingi tuzatishlar o‘chirilmaydi.
 
 **Statistika ta’riflari (F12):** jami ticketlar — retention ichida saqlanayotgan ticketlar; kategoriya/ustuvorlik taqsimoti — eng so‘nggi tasnif yoki operator tasdiqlagan amaldagi qiymat bo‘yicha; manual review ulushi — `review_reason` qayd etilgan ticketlar (hozir `needs_review` bo‘lganlar va operator hal qilganlar) / jami import qilingan yaroqli ticketlar; operator tuzatish ulushi — kamida bitta correction yozuvi bor ticketlar / AI tasniflangan ticketlar. Yo‘naltirish vaqti — `classified_at - ingested_at`; statistikada davr filtri va hisobga kiritilgan ticketlar soni ko‘rsatiladi.
 
@@ -195,7 +196,7 @@ Datasetda 21 ta ticketda AI’ga buyruq yozilgan (masalan, “mark this ticket a
 1. **Prompt:** murojaat matni `<ticket>` blokida “ma’lumot” sifatida beriladi, matn ichidagi `<ticket>` belgilari ekranlanadi; ichidagi ko‘rsatmalar bajarilmasligi aytiladi; tizim ko‘rsatmasini chiqarish taqiqlanadi.
 2. **Sxema:** faqat ruxsat etilgan `category` va `priority` qiymatlari qabul qilinadi, erkin matn buyrug‘i natijaga ta’sir qila olmaydi.
 3. **Evristika:** kontekstga bog‘liq naqshlar tekshiriladi: oldingi ko‘rsatmalarni bekor qilish, system promptni oshkor qilish yoki modelga kategoriya/priorityni majburan belgilashga qaratilgan iboralar. `P1` yoki `fraud` so‘zining o‘zi injection belgisi hisoblanmaydi.
-4. **Qaror:** `injection_flag` bo‘lgan ticket LLM’ga yuborilmaydi va avtomatik tasniflanmaydi; `needs_review` (`injection_suspected`) bo‘ladi. Operatorga shubha sababi ko‘rsatiladi.
+4. **Qaror:** evristika shubhali deb topgan ticket LLM’ga yuborilmaydi va avtomatik tasniflanmaydi; `needs_review` (`injection_suspected`) bo‘ladi. Operatorga shubha sababi ko‘rsatiladi.
 5. **Cheklov va test:** regex/evristika barcha prompt injection urinishlarini aniqlashga kafolat bermaydi. Datasetdagi 21 ta injection namunasi hamda oddiy matndagi `P1`, `fraud` so‘zlari qatnashgan false-positive holatlar (datasetda bunday matn yo‘q, sun’iy namunalar bilan) alohida testlanadi.
 
 # 8. Maxfiylik va xavfsizlik
@@ -209,13 +210,13 @@ Datasetda 21 ta ticketda AI’ga buyruq yozilgan (masalan, “mark this ticket a
 | Karta raqami (13–19 xona, bo‘shliq/chiziqcha bilan yoki yo‘q); Luhn tekshiruvi ishlatilmaydi: datasetdagi 202 ta raqamdan faqat 15 tasi undan o‘tadi | Oxirgi 4 raqam qoladi: `**** **** **** 1234`           |
 | Pasport/identifikator (`AB1234567`; datasetda kichik harf, kirill va aralash yozuvli ham bor, jami 104 ta) | `[PASSPORT]`                                           |
 | Telefon (`+998 ...`, turli yozuvlar)                                                 | `[PHONE]`                                              |
-| Ism-familiya (email imzosi)                                                          | Imzo tozalash bosqichida olib tashlanadi               |
+| Ism-familiya (imzo, istalgan kanalda)                                                | Imzo tozalash bosqichida olib tashlanadi               |
 
 - **Fail-closed:** maskalash xato bersa, ticket LLM’ga yuborilmaydi va xom matn bazaga, ES’ga yoki logga yozilmaydi. Faqat manba qatori identifikatori va `masking_error` holati/xato kodi saqlanadi; xom matnni saqlashga yo‘l qo‘yilmaydi.
 - Asl (maskalanmagan) matn bazada, ES’da, logda va LLM so‘rovida bo‘lmaydi. Yuklangan CSV diskka saqlanmaydi.
 - **Loglar:** faqat ticket `id`, holat va xato turi yoziladi; ticket matni loglanmaydi.
-- **Saqlash muddati:** `RETENTION_DAYS=90` (PRD 11-bo‘lim). Kunlik cleanup vazifasi `ingested_at` bo‘yicha muddati tugagan ticketlarni, classifications, corrections, audit bilan bog‘liq ticket yozuvlarini va Elasticsearch hujjatlarini o‘chiradi. O‘chirish natijasi logda faqat sonlar va xato kodlari ko‘rinishida qayd etiladi.
-- **Kirish:** login/parol, JWT, rollar. Sirlar (`.env`) repozitoriyga kirmaydi, `.env.example` beriladi.
+- **Saqlash muddati:** `RETENTION_DAYS=90` (PRD 11-bo‘lim). Kunlik cleanup vazifasi `ingested_at` bo‘yicha muddati tugagan ticketlarni, ularning classifications va corrections yozuvlarini hamda Elasticsearch hujjatlarini o‘chiradi. O‘chirish natijasi logda faqat sonlar va xato kodlari ko‘rinishida qayd etiladi.
+- **Kirish:** login/parol, JWT, rollar. Sirlar (`.env`) repozitoriyga kirmaydi, `.env.example` beriladi. Compose’dagi standart demo qiymatlar faqat lokal ishga tushirish uchun.
 - **Kirish cheklovlari:** CSV hajmi (taklif: 10 MB), bitta matn uzunligi (taklif: 4 000 belgi).
 - **AI provayderi:** MVP’da tashqi provayderga hech narsa yuborilmaydi.
 
@@ -243,7 +244,7 @@ Quyidagilar GPU tezlashtirishli mashina uchun dastlabki taxminlar. `make bench` 
 # 10. Unumdorlik va ishonchlilik
 
 - **Yuk:** kuniga ~3 000 ticket ≈ daqiqasiga ~2 ta. `worker` parallelligi 3 (taklif; `llm` servisi parallel so‘rovlar soniga moslanadi).
-- **Katta import:** 2 000 ticketli CSV ≈ 22–44 daqiqa (3 parallel so‘rov, 2–4 s/ticket; 9-bo‘lim). Import fonda ishlaydi, holat `GET /api/imports/{id}` da ko‘rinadi, operator ekrani bloklanmaydi.
+- **Katta import:** 2 000 ticketli CSV ≈ 22–44 daqiqa (3 parallel so‘rov, 2–4 s/ticket; 9-bo‘lim). CSV qabul qilish so‘rov davomida oqim sifatida bajariladi (fayl diskka yozilmaydi), LLM tasniflash esa `worker` da fonda ishlaydi. Holat `GET /api/imports/{id}` da ko‘rinadi, operator ekrani bloklanmaydi.
 - **“Yo‘naltirish vaqti” ko‘rsatkichi (PRD 9-bo‘lim):** `classified_at − ingested_at`. Maqsad — o‘rtacha 1 daqiqadan kam; bu natija real uskuna va 3 000 ticketlik yuklama bilan benchmark qilinadi. Katta CSV import alohida (`import_job_id` bo‘yicha) hisoblanadi. Navbat yig‘ilib qolsa, kechikish oshishi mumkin; tizim bu holatda ticketlarni yo‘qotmasdan navbatda saqlaydi.
 - **Ishonchlilik, 99.99% emas (PRD №4):** bitta mashina, bitta PostgreSQL va ES. Qo‘llab-quvvatlanadi: `restart: unless-stopped`, healthcheck, ma’lumotlar uchun Docker volume. ES ishlamasa ticketlarni qabul qilish va filtrlar ishlaydi; LLM ishlamasa ticketlar saqlanadi va `llm_unavailable` sababli qo‘lda tekshirishga tushadi. LLM ishlamasligi API liveness holatini `unhealthy` qilmaydi. 99.99% uchun replikatsiya, zaxira nusxa va monitoring kerak; bu MVP’dan tashqarida.
 
@@ -257,7 +258,7 @@ Quyidagilar GPU tezlashtirishli mashina uchun dastlabki taxminlar. `make bench` 
 | Matnda AI’ga buyruq berishga urinish                         | LLM’ga yuborilmaydi, hech qachon avto-qabul emas                                                 | `needs_review`: `injection_suspected`                                |
 | LLM noto‘g‘ri JSON yoki ruxsat etilmagan qiymat qaytardi     | 1 marta qayta urinish, keyin natija rad etiladi                                                  | `needs_review`: `schema_error`                                       |
 | `llm` servisi javob bermadi yoki timeout                     | 2 urinish (kutish bilan), keyin ticket saqlanadi                                                 | `needs_review`: `llm_unavailable`; LLM tiklangach “qayta tasniflash” |
-| Birinchi ishga tushishda model hali yuklanmoqda              | `worker` `llm` healthcheck’ini kutadi; ticketlar `pending` holatida qoladi                       | AI natijasi model tayyor bo‘lgach chiqadi                            |
+| Birinchi ishga tushishda model hali yuklanmoqda              | `worker` model tayyor bo‘lguncha LLM vazifalarini olmaydi; ticketlar `pending`, outbox ishlayveradi | AI natijasi model tayyor bo‘lgach chiqadi                            |
 | CSV sarlavhasi noto‘g‘ri yoki ustun yetishmaydi              | Import boshlanmaydi                                                                              | Xato ro‘yxati                                                        |
 | CSV’dagi alohida qator noto‘g‘ri (`id` yo‘q, sana noto‘g‘ri) | Qator o‘tkazib yuboriladi, import davom etadi                                                    | Import hisobotida                                                    |
 | CSV’da `text` bo‘sh                                          | Xato emas: ticket saqlanadi                                                                      | `needs_review`: `no_content`                                         |
@@ -266,15 +267,15 @@ Quyidagilar GPU tezlashtirishli mashina uchun dastlabki taxminlar. `make bench` 
 | Maskalash xatosi                                             | Xom matn saqlanmaydi va LLM’ga yuborilmaydi; faqat identifikator va xato kodi qayd etiladi       | `needs_review`: `masking_error`                                      |
 | Elasticsearch ishlamayapti                                   | Ticket PostgreSQL’da saqlanadi; `search_index_outbox` vazifasi retry qilinadi; filtrlar ishlaydi | Qidiruv vaqtincha mavjud emasligi haqida xabar                       |
 | PostgreSQL ishlamayapti                                      | API 503 qaytaradi, konteyner qayta ishga tushadi                                                 | Xato sahifasi                                                        |
-| Juda uzun matn                                               | 4 000 belgigacha kesiladi                                                                        | —                                                                    |
+| Juda uzun matn                                               | Maskalashdan keyin 4 000 belgigacha kesiladi                                                     | —                                                                    |
 
 # 12. Testlash va sifat baholash
 
 **Avtomatik testlar (pytest):**
 
 - _Birlik:_ maskalash (karta turli yozuvlarda, CVV, muddat, pasport/identifikator, telefon), email tozalash, apostrof va yozuvni me’yorlash, mazmunsiz matn aniqlash, injection evristikasi va false positive holatlari, javob sxemasini tekshirish, kategoriya → jamoa, navbat tartibi.
-- _Integratsiya:_ CSV import (sarlavha xatosi, bo‘sh `text`, takroriy manba ID, qayta import), API (auth, rollar, tuzatish tarixi va audit), `worker` soxta (stub) LLM bilan (to‘g‘ri JSON, noto‘g‘ri JSON, timeout), ES o‘chiq holati va outbox retry.
-- _Maxfiylik testi:_ butun `tickets.csv` (2 000 ta) pipeline’dan o‘tkaziladi; LLM so‘rovlarida, bazada, ES’da va logda xom karta raqami, CVV, pasport yo‘qligi tekshiriladi.
+- _Integratsiya:_ CSV import (sarlavha xatosi, bo‘sh `text`, takroriy manba ID, qayta import), API (auth, rollar, tuzatish tarixi), `worker` soxta (stub) LLM bilan (to‘g‘ri JSON, noto‘g‘ri JSON, timeout), ES o‘chiq holati va outbox retry.
+- _Maxfiylik testi:_ butun `tickets.csv` (2 000 ta) pipeline’dan o‘tkaziladi; LLM so‘rovlarida, bazada, ES’da va logda xom karta raqami, CVV, karta muddati, pasport va telefon yo‘qligi tekshiriladi.
 
 **Sifat baholash (etalon to‘plam):**
 
@@ -309,12 +310,11 @@ docker compose up --build
 **Servislar:** `web`, `api`, `worker`, `postgres`, `elasticsearch`, `llm`.
 
 - **Bitta buyruq:** barcha sozlamalarning Compose’da standart qiymati bor, `.env` ixtiyoriy (`.env.example` faqat o‘zgartirish uchun namuna). Demo foydalanuvchilar ham standart qiymatlardan yaratiladi.
-- **`llm` servisi:** Ollama image’i `LLM_MODEL` ni birinchi ishga tushishda Docker volume’ga yuklaydi (taxminan 23 GB; internet kerak) va model tayyor bo‘lgach healthy bo‘ladi. `worker` shu holatni kutadi (`depends_on: service_healthy`); `web`, `api` esa darhol ishlaydi. Keyingi ishga tushirishlarda model volume’dan olinadi.
+- **`llm` servisi:** Ollama image’i `LLM_MODEL` ni birinchi ishga tushishda Docker volume’ga yuklaydi (taxminan 23 GB; internet kerak) va model tayyor bo‘lgach healthy bo‘ladi. Boshqa servislar darhol ishlaydi: `worker` ES outbox’ini bajaradi, LLM vazifalarini esa model tayyor bo‘lgach oladi. Keyingi ishga tushirishlarda model volume’dan olinadi.
 - **Uskuna (taklif, benchmark bilan aniqlanadi):** taxminan 24 GB bo‘sh RAM va 40 GB bo‘sh disk. GPU shart emas.
 - **Ixtiyoriy LM Studio:** ishlab chiqishda tezroq ishlash uchun `.env` da `LLM_BASE_URL` hostdagi LM Studio’ga yo‘naltiriladi (`http://host.docker.internal:1234/v1`; Linux’da `extra_hosts: ["host.docker.internal:host-gateway"]`). Bu topshiriq talabi uchun kerak emas.
 - **Ma’lumot yuklash:** UI’dagi import sahifasi. `make` buyruqlari (`make import FILE=data/tickets.csv`, `make eval`, `make bench`) faqat qulaylik uchun; toza mashinada `make` shart emas.
 - ES uchun `ES_JAVA_OPTS=-Xms512m -Xmx512m`, bitta tugun (single-node), lokal rejimda xavfsizlik o‘chiq.
-- Aniq talablar (xotira, GPU, birinchi ishga tushish vaqti) `README.md` da.
 
 # 14. CI (GitHub Actions)
 
@@ -343,6 +343,7 @@ Biror qadam xato bersa, pipeline xato bilan tugaydi. Model baholash (`make eval`
 - Model natijasi har doim to‘g‘ri emas; operator tekshiruvi va tuzatishi shu uchun mavjud.
 - O‘zbek tilida (ayniqsa kirill va aralash matnda) model aniqligi pastroq bo‘lishi mumkin; aniqlik til bo‘yicha o‘lchanadi.
 - Lokal modelning tezligi kompyuter resurslariga bog‘liq; CPU’da yo‘naltirish vaqti maqsadi bajarilmasligi mumkin. `llm` servisi ishlamasa AI tasniflash vaqtincha mavjud emas (ticketlar `llm_unavailable` bilan saqlanadi).
+- Injection shubhasi bor ticket LLM’ga yuborilmagani uchun operator ko‘rmaguncha xulosa va AI ustuvorligisiz qoladi.
 - Baholash faqat qo‘lda belgilangan to‘plam doirasida xulosa beradi; belgilovchi bitta.
 - Bitta mashina, replikatsiyasiz: 99.99% kafolatlanmaydi.
 - Real vaqtdagi Telegram/email/web-forma integratsiyasi, takroriy mijozni aniqlash va birinchi javob vaqtini tizimda o‘lchash MVP’dan tashqarida (PRD 5.2).

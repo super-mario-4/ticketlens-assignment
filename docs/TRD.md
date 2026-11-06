@@ -10,7 +10,7 @@ TicketLens – CSV fayldan mijoz murojaatlarini (ticketlarni) qabul qilib, matnn
 
 | PRD    | Talab                                   | Texnik yechim                                                |
 | ------ | --------------------------------------- | ------------------------------------------------------------ |
-| F1     | CSV import                              | `api`: `POST /api/imports`, oqimli (streaming) o‘qish        |
+| F1     | CSV import                              | `api`: `POST /api/imports`, multipart fayl, xotirada o‘qish  |
 | F2     | Matnni tayyorlash va maskalash          | `preprocess` moduli, import vaqtida (bazaga yozishdan oldin) |
 | F3, F4 | AI tasnif va xulosa                     | `worker` → LLM servisi, JSON sxema bilan                     |
 | F5     | Jamoaga yo‘naltirish                    | `routing.yaml` (kategoriya → jamoa), LLM tanlamaydi          |
@@ -44,7 +44,7 @@ flowchart LR
 | Ma’lumotlar bazasi      | PostgreSQL                                              | Asosiy ombor va ishlov navbati (`FOR UPDATE SKIP LOCKED`)              |
 | Qidiruv                 | Elasticsearch                                           | Ticket matni bo‘yicha qidiruv (3-bo‘lim)                               |
 | AI                      | Qwen3.6-35B-A3B (Compose’dagi Ollama), OpenAI-mos HTTP API | Tasniflash va xulosa (7-bo‘lim); MVP’da yagona standart model          |
-| Frontend (`web`)        | Vite, React, TypeScript, Tailwind CSS, shadcn/ui; nginx | Navbat, qo‘lda tekshirish navbati, ticket sahifasi, import, statistika |
+| Frontend (`web`)        | Vite, React, TypeScript, Tailwind CSS; nginx            | Navbat, qo‘lda tekshirish navbati, ticket sahifasi, import, statistika |
 | Ishga tushirish         | Docker Compose                                          | Barcha servislar bitta buyruq bilan                                    |
 | Testlar                 | pytest (backend), Vitest (frontend, ixtiyoriy)          | 12-bo‘lim                                                              |
 | CI                      | GitHub Actions                                          | 14-bo‘lim                                                              |
@@ -96,7 +96,7 @@ flowchart TD
 
 **Bosqichlar:**
 
-1. Operator CSV faylni yuklaydi (yoki `make import FILE=data/tickets.csv`). Fayl diskka yozilmaydi, oqim sifatida o‘qiladi.
+1. Operator CSV faylni yuklaydi (yoki `make import FILE=data/tickets.csv`). Fayl `multipart/form-data` (`file` maydoni) orqali yuboriladi, diskka yozilmaydi va xotirada o‘qiladi (10 MB chegarasi bilan).
 2. Backend sarlavhani (`id, channel, created_at, text, customer_id`) va har bir qatorni tekshiradi. CSV’dagi `id` manba identifikatori hisoblanadi; u ichki primary key sifatida ishlatilmaydi. Bir import ichida takrorlangan manba ID o‘tkazib yuboriladi.
 3. Matn tozalanadi (email “Mavzu:” sarlavhasi, imzo, “Sent from my iPhone”, avto-javob iqtiboslari), me’yorlanadi va maxfiy ma’lumotlar maskalanadi. Faqat shu qatorlar olib tashlanadi, imzodan keyingi matn kesilmaydi: datasetdagi 5 ta injection imzodan keyin yozilgan. Imzo faqat email’da emas, boshqa kanallarda ham uchraydi.
 4. Bo‘sh yoki mazmunsiz matn LLM’ga yuborilmasdan PostgreSQL’ga `needs_review` (`no_content`) holatida yoziladi.
@@ -110,7 +110,7 @@ flowchart TD
 
 | Jadval                | Asosiy maydonlar                                                                                                                                                                                                                                                             |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `import_jobs`         | `id`, `filename`, `status`, `total`, `inserted`, `skipped`, `errors` (JSON: faqat qator ID va xato kodi, ticket matni emas), `created_by`, `created_at`                                                                                                                                                                      |
+| `import_jobs`         | `id`, `filename`, `status` (`processing`, `completed`, `failed`), `total`, `inserted`, `skipped`, `errors` (JSON: faqat qator ID va xato kodi, ticket matni emas), `created_by`, `created_at`, `finished_at`                                                                                                                                                                      |
 | `tickets`             | `id` (ichki UUID primary key), `source_ticket_id` (CSV’dagi `id`), `channel`, `created_at` (murojaat vaqti), `customer_id`, `text_masked` (`masking_error` holatida bo‘sh), `status`, `review_reason`, `attempts`, `import_job_id`, `ingested_at`, `processing_started_at`, `classified_at` |
 | `classifications`     | `id`, `ticket_id`, `model`, `prompt_version`, `category`, `priority`, `confidence`, `summary`, `team`, `latency_ms`, `input_tokens`, `output_tokens`, `created_at` (AI natijasi, o‘zgarmaydi)                                                                                |
 | `corrections`         | `id`, `ticket_id`, `old_category`, `new_category`, `old_priority`, `new_priority`, `old_team`, `new_team` (`old_*` AI natijasi bo‘lmaganda bo‘sh), `reason` (ixtiyoriy), `corrected_by`, `corrected_at` (har bir tuzatish alohida, append-only tarix)                                                                |
@@ -136,6 +136,7 @@ flowchart TD
 | `PATCH /api/tickets/{id}/classification`     | Operator tuzatishi (kategoriya, ustuvorlik, jamoa)                                                                           |
 | `POST /api/tickets/{id}/reclassify`          | `llm_unavailable` yoki `schema_error` bo‘lgan ticketni qayta tasniflash                                                      |
 | `GET /api/stats`                             | Rahbar statistikasi (F12)                                                                                                    |
+| `GET /api/meta`                              | Ruxsat etilgan qiymatlar va jamoalar: UI o‘z ro‘yxatini saqlamaydi (5-bo‘lim)                                                |
 | `GET /api/health/live`                       | API jarayoni ishlayotganini tekshiradi (liveness)                                                                            |
 | `GET /api/health/ready`                      | Majburiy bog‘liqliklar tayyorligini tekshiradi; PostgreSQL majburiy, ES va LLM holati alohida komponent sifatida qaytariladi |
 
@@ -222,29 +223,29 @@ Datasetda 21 ta ticketda AI’ga buyruq yozilgan (masalan, “mark this ticket a
 
 # 9. Xarajat bahosi (1 000 ticket)
 
-Quyidagilar GPU tezlashtirishli mashina uchun dastlabki taxminlar. `make bench` ko‘rsatkichlarni haqiqiy `llm` servisi va maqsadli uskuna bilan o‘lchab, qiymatlarni almashtiradi (`input_tokens`, `output_tokens`, `latency_ms` har bir tasnifda saqlanadi).
+Vaqt va tokenlar haqiqiy `llm` servisida, GPU’siz, 20 yadroli CPU va 24 GB’li WSL2’da o‘lchangan (`make bench`, `eval/bench.md`). Quvvat o‘lchanmagan, shuning uchun energiya va pul qiymatlari hali baho.
 
 | Ko‘rsatkich                              | Baho                                                                                                                   | Asos                                                               |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | Ticket matni                             | o‘rtacha ~110 belgi ≈ 45–55 token                                                                                      | tickets.csv: o‘rtacha 110, eng ko‘pi 299 belgi; ~2–2.5 belgi/token |
-| Prompt (ko‘rsatma, kategoriyalar, sxema) | ~900 token (taklif)                                                                                                    |                                                                    |
-| Kirish tokenlari / ticket                | ~950–1 000                                                                                                             |                                                                    |
-| Chiqish tokenlari / ticket               | ~100–130                                                                                                               | fikrlash rejimi o‘chiq                                             |
-| **1 000 ticket**                         | **≈ 1.0 mln kirish + ≈ 0.12 mln chiqish token**                                                                        |                                                                    |
-| Qayta ishlash vaqti                      | ~2–4 s / ticket (taklif)                                                                                               |                                                                    |
-| 1 000 ticket vaqti                       | ≈ 33–67 daqiqa ketma-ket (2–4 s/ticket); 3 parallel so‘rovda nazariy ≈ 11–22 daqiqa, amalda benchmark bilan o‘lchanadi |                                                                    |
-| Elektr energiyasi                        | ≈ 0.2–0.5 kWh                                                                                                          | kompyuter 300–450 W (taklif)                                       |
+| Prompt (ko‘rsatma, kategoriyalar, sxema) | ≈ 600 token (eng qisqa ticket bilan jami 614, o‘lchangan)                                                              | v2 prompt                                                          |
+| Kirish tokenlari / ticket                | **638** (v2 prompt, o‘lchangan)                                                                                        | `eval/report.md`                                                   |
+| Chiqish tokenlari / ticket               | **76** (o‘lchangan)                                                                                                    | fikrlash rejimi o‘chiq                                             |
+| **1 000 ticket**                         | **≈ 0.64 mln kirish + ≈ 0.08 mln chiqish token**                                                                       |                                                                    |
+| Qayta ishlash vaqti                      | CPU’da bitta so‘rov: p50 9.7 s, p95 11.0 s. 3 parallelda: p50 16.9 s, p95 25.4 s (o‘lchangan)                          | `eval/report.md`, `eval/bench.md`                                  |
+| 1 000 ticket vaqti                       | **≈ 97 daqiqa** 3 parallel so‘rovda (~620 ticket/soat, o‘lchangan)                                                     | 20 yadroli CPU, GPU’siz; `eval/bench.md`                           |
+| Elektr energiyasi                        | ≈ 0.5–0.7 kWh (quvvat o‘lchanmagan)                                                                                    | 97 daqiqa × 300–450 W (taklif)                                     |
 | Tashqi API to‘lovi                       | **0**                                                                                                                  | model lokal                                                        |
-| Pul ko‘rinishidagi xarajat               | **≈ 220–550 so‘m / 1 000 ticket** (uskuna amortizatsiyasisiz)                                                          | 0.2–0.5 kWh × 1 100 so‘m/kWh (yuridik shaxslar tarifi, 2026-yil 1-iyundan; rasmiy manba bilan tekshiriladi) |
+| Pul ko‘rinishidagi xarajat               | **≈ 530–790 so‘m / 1 000 ticket** (uskuna amortizatsiyasisiz)                                                         | 0.48–0.72 kWh × 1 100 so‘m/kWh; tarif rasmiy manba bilan tekshiriladi |
 
 **Tashqi API xarajati:** MVP’da tashqi LLM API ishlatilmaydi, shuning uchun provayder narxlari bu hujjatdagi hisob-kitobga kiritilmaydi. Lokal ishlash xarajati elektr energiyasi va uskuna resurslari bilan baholanadi.
 
-**Uskuna va unumdorlik:** Qwen3.6-35B-A3B 4-bit kvantlashda ham taxminan 20 GB yoki undan ko‘p umumiy xotira talab qilishi mumkin (model fayli va runtime sozlamasiga bog‘liq); Ollama’dagi model hajmi taxminan 23 GB. 8 GB VRAM’li GPU’da model to‘liq GPU xotirasiga sig‘maydi; CPU offload ishlatilishi mumkin va tezlik sezilarli pasayadi. Toza mashinada Docker’dan boshqa narsa yo‘q, shuning uchun Compose standarti CPU’da ishlaydi: bu holatda vaqt va energiya sarfi jadvaldagidan bir necha baravar yuqori bo‘lishi mumkin. Shu sababli 2–4 soniya/ticket hamda kunlik umumiy vaqt faqat dastlabki taxmin: `make bench` orqali real uskuna, context, parallelism va token soni bilan o‘lchanadi. Kuniga 3 000 ticket uchun bitta mashina yetarliligi benchmark natijasisiz kafolatlanmaydi.
+**Uskuna va unumdorlik:** `qwen3.6:35b-a3b` bu mashinada 22.7 GB RSS egalladi va 100% CPU’da ishladi. ~620 ticket/soat o‘rtacha 3 000 ticket/kun (125 ticket/soat) yukidan yuqori, lekin 2 000 ticketli CSV bir vaqtda navbatga tushadi va taxminan 3.2 soat oladi. Bu qiymat bitta mashina va bitta sozlama uchun; boshqa uskunada qayta o‘lchanadi.
 
 # 10. Unumdorlik va ishonchlilik
 
 - **Yuk:** kuniga ~3 000 ticket ≈ daqiqasiga ~2 ta. `worker` parallelligi 3 (taklif; `llm` servisi parallel so‘rovlar soniga moslanadi).
-- **Katta import:** 2 000 ticketli CSV ≈ 22–44 daqiqa (3 parallel so‘rov, 2–4 s/ticket; 9-bo‘lim). CSV qabul qilish so‘rov davomida oqim sifatida bajariladi (fayl diskka yozilmaydi), LLM tasniflash esa `worker` da fonda ishlaydi. Holat `GET /api/imports/{id}` da ko‘rinadi, operator ekrani bloklanmaydi.
+- **Katta import:** 2 000 ticketli CSV ≈ 3.2 soat (CPU’da, 3 parallel so‘rov, ~620 ticket/soat; 9-bo‘lim). CSV qabul qilish so‘rov davomida xotirada bajariladi (fayl diskka yozilmaydi), LLM tasniflash esa `worker` da fonda ishlaydi. Holat `GET /api/imports/{id}` da ko‘rinadi, operator ekrani bloklanmaydi.
 - **“Yo‘naltirish vaqti” ko‘rsatkichi (PRD 9-bo‘lim):** `classified_at − ingested_at`. Maqsad — o‘rtacha 1 daqiqadan kam; bu natija real uskuna va 3 000 ticketlik yuklama bilan benchmark qilinadi. Katta CSV import alohida (`import_job_id` bo‘yicha) hisoblanadi. Navbat yig‘ilib qolsa, kechikish oshishi mumkin; tizim bu holatda ticketlarni yo‘qotmasdan navbatda saqlaydi.
 - **Ishonchlilik, 99.99% emas (PRD №4):** bitta mashina, bitta PostgreSQL va ES. Qo‘llab-quvvatlanadi: `restart: unless-stopped`, healthcheck, ma’lumotlar uchun Docker volume. ES ishlamasa ticketlarni qabul qilish va filtrlar ishlaydi; LLM ishlamasa ticketlar saqlanadi va `llm_unavailable` sababli qo‘lda tekshirishga tushadi. LLM ishlamasligi API liveness holatini `unhealthy` qilmaydi. 99.99% uchun replikatsiya, zaxira nusxa va monitoring kerak; bu MVP’dan tashqarida.
 
@@ -279,10 +280,10 @@ Quyidagilar GPU tezlashtirishli mashina uchun dastlabki taxminlar. `make bench` 
 
 **Sifat baholash (etalon to‘plam):**
 
-- Kamida 50 ta (maqsad: 100 ta) ticketni o‘zim qo‘lda belgilayman: kategoriya va ustuvorlik. Noyob matnlardan tanlanadi (takrorlar hisobga olinmaydi) va hamma holat qamrab olinadi: o‘zbek lotin, o‘zbek kirill, rus, ruscha lotin, aralash, email shovqini, mazmunsiz matn, injection, barcha kategoriyalar.
+- Kamida 50 ta (maqsad: 100 ta) ticket qo‘lda belgilanadi: kategoriya va ustuvorlik. Kim belgilagani va cheklovlari: `eval/README.md`. Noyob matnlardan tanlanadi (takrorlar hisobga olinmaydi) va hamma holat qamrab olinadi: o‘zbek lotin, o‘zbek kirill, rus, ruscha lotin, aralash, email shovqini, mazmunsiz matn, injection, barcha kategoriyalar.
 - Belgilash qoidalari – PRD 7-bo‘lim (bahsli holatlar qoidalari).
 - Ixtiyoriy: 10–20 ta ticketni bir kundan keyin qayta belgilab, o‘zim bilan kelishuvni tekshirish (bitta belgilovchi cheklovi).
-- `make eval` hisobot yozadi (`eval/report.md`).
+- `make eval` hisobot yozadi (`eval/report.md`), `make bench` saqlangan natijalardan tezlikni o‘lchaydi (`eval/bench.md`).
 
 **O‘lchanadigan ko‘rsatkichlar va maqsadlar** (PRD 9-bo‘lim):
 
@@ -309,11 +310,12 @@ docker compose up --build
 
 **Servislar:** `web`, `api`, `worker`, `postgres`, `elasticsearch`, `llm`.
 
-- **Bitta buyruq:** barcha sozlamalarning Compose’da standart qiymati bor, `.env` ixtiyoriy (`.env.example` faqat o‘zgartirish uchun namuna). Demo foydalanuvchilar ham standart qiymatlardan yaratiladi.
+- **Bitta buyruq:** barcha sozlamalarning Compose’da standart qiymati bor, `.env` ixtiyoriy (`.env.example` faqat o‘zgartirish uchun namuna). Ekran `http://localhost:3000` da. Demo foydalanuvchilar standart qiymatlardan yaratiladi: `operator` / `operator` va `lead` / `lead`; faqat lokal ishlatish uchun.
 - **`llm` servisi:** Ollama image’i `LLM_MODEL` ni birinchi ishga tushishda Docker volume’ga yuklaydi (taxminan 23 GB; internet kerak) va model tayyor bo‘lgach healthy bo‘ladi. Boshqa servislar darhol ishlaydi: `worker` ES outbox’ini bajaradi, LLM vazifalarini esa model tayyor bo‘lgach oladi. Keyingi ishga tushirishlarda model volume’dan olinadi.
-- **Uskuna (taklif, benchmark bilan aniqlanadi):** taxminan 24 GB bo‘sh RAM va 40 GB bo‘sh disk. GPU shart emas.
+- **Uskuna (o‘lchangan):** model 22.7 GB RSS egallaydi. Docker’ga 24 GB berilganda bo‘sh xotira ~0.5 GB qoldi va 5–6 GB swap ishlatildi, yonida test stack’i ishlatilsa yetmaydi. Ishonchli ishlash uchun Docker’ga kamida 28 GB (taklif) va 40 GB bo‘sh disk kerak. GPU shart emas.
+- **Birinchi ishga tushish:** bo‘sh Docker’da `docker compose up --build` 13 daq 42 s’da `web` va `api` ni ko‘tardi: Compose avval barcha image’larni tortadi, jumladan katta Ollama image’ini. Model yuklanishi bunga kirmaydi (~23 GB).
 - **Ixtiyoriy LM Studio:** ishlab chiqishda tezroq ishlash uchun `.env` da `LLM_BASE_URL` hostdagi LM Studio’ga yo‘naltiriladi (`http://host.docker.internal:1234/v1`; Linux’da `extra_hosts: ["host.docker.internal:host-gateway"]`). Bu topshiriq talabi uchun kerak emas.
-- **Ma’lumot yuklash:** UI’dagi import sahifasi. `make` buyruqlari (`make import FILE=data/tickets.csv`, `make eval`, `make bench`) faqat qulaylik uchun; toza mashinada `make` shart emas.
+- **Ma’lumot yuklash:** UI’dagi import sahifasi. `make` buyruqlari (`make import FILE=data/tickets.csv`, `make test`, `make eval`, `make bench`) faqat qulaylik uchun; toza mashinada `make` shart emas.
 - ES uchun `ES_JAVA_OPTS=-Xms512m -Xmx512m`, bitta tugun (single-node), lokal rejimda xavfsizlik o‘chiq.
 
 # 14. CI (GitHub Actions)
@@ -321,9 +323,9 @@ docker compose up --build
 Har bir `push` da:
 
 1. **Backend:** lint (`ruff`) va `pytest` (PostgreSQL va Elasticsearch servis konteynerlari bilan, LLM soxta/stub).
-2. **Frontend:** `npm ci`, tur tekshiruvi (typecheck), lint, build.
+2. **Frontend:** `npm ci`, tur tekshiruvi (typecheck), lint, build. Bular `web` image’i ichida bajariladi, shuning uchun 3-qadamda tekshiriladi.
 3. **Docker:** barcha image’lar build qilinadi.
-4. **Smoke test:** `docker compose up -d postgres elasticsearch api`, so‘ng `GET /api/health/live` va `GET /api/health/ready` tekshiriladi. CI’da model yuklanmaydi: `llm` va `worker` ishga tushirilmaydi, readiness esa LLM’ga bog‘liq emas (6-bo‘lim).
+4. **Smoke test:** `docker compose up -d postgres elasticsearch api web`, so‘ng `GET /api/health/live`, `GET /api/health/ready`, bosh sahifa va `web` orqali API tekshiriladi. CI’da model yuklanmaydi: `llm` va `worker` ishga tushirilmaydi, readiness esa LLM’ga bog‘liq emas (6-bo‘lim).
 
 Biror qadam xato bersa, pipeline xato bilan tugaydi. Model baholash (`make eval`) CI’da emas (lokal model kerak), natijasi `eval/report.md` sifatida repozitoriyda saqlanadi.
 
@@ -344,6 +346,7 @@ Biror qadam xato bersa, pipeline xato bilan tugaydi. Model baholash (`make eval`
 - O‘zbek tilida (ayniqsa kirill va aralash matnda) model aniqligi pastroq bo‘lishi mumkin; aniqlik til bo‘yicha o‘lchanadi.
 - Lokal modelning tezligi kompyuter resurslariga bog‘liq; CPU’da yo‘naltirish vaqti maqsadi bajarilmasligi mumkin. `llm` servisi ishlamasa AI tasniflash vaqtincha mavjud emas (ticketlar `llm_unavailable` bilan saqlanadi).
 - Injection shubhasi bor ticket LLM’ga yuborilmagani uchun operator ko‘rmaguncha xulosa va AI ustuvorligisiz qoladi.
-- Baholash faqat qo‘lda belgilangan to‘plam doirasida xulosa beradi; belgilovchi bitta.
+- Baholash faqat belgilangan to‘plam doirasida xulosa beradi; belgilovchi bitta va u AI agent, muallif tekshiruvi kutilmoqda (`eval/README.md`).
+- Model `confidence` qiymati kalibrlanmagan: saqlangan barcha javoblarda 0.9–1.0, ya’ni 0.7 chegara amalda ishlamaydi. `low_confidence` holati hali bir marta ham uchramadi.
 - Bitta mashina, replikatsiyasiz: 99.99% kafolatlanmaydi.
 - Real vaqtdagi Telegram/email/web-forma integratsiyasi, takroriy mijozni aniqlash va birinchi javob vaqtini tizimda o‘lchash MVP’dan tashqarida (PRD 5.2).

@@ -14,6 +14,7 @@ def get_engine() -> Engine:
     return create_engine(
         get_settings().database_url,
         pool_pre_ping=True,
+        hide_parameters=True,  # Keeps ticket text out of database error messages and logs.
         connect_args={"connect_timeout": CONNECT_TIMEOUT_SECONDS},
     )
 

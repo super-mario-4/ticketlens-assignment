@@ -12,6 +12,7 @@ class LivenessResponse(BaseModel):
 class ReadinessComponents(BaseModel):
     postgres: ComponentStatus
     elasticsearch: ComponentStatus
+    llm: ComponentStatus
 
 
 class ReadinessResponse(BaseModel):

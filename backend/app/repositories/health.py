@@ -5,16 +5,25 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.classification.classifier import Classifier
+
 logger = logging.getLogger(__name__)
 
 
 class HealthRepository:
     """Checks whether the system's data stores can be reached."""
 
-    def __init__(self, session: Session, elasticsearch_url: str, timeout_seconds: float) -> None:
+    def __init__(
+        self,
+        session: Session,
+        elasticsearch_url: str,
+        timeout_seconds: float,
+        classifier: Classifier,
+    ) -> None:
         self._session = session
         self._elasticsearch_url = elasticsearch_url
         self._timeout_seconds = timeout_seconds
+        self._classifier = classifier
 
     def postgres_is_available(self) -> bool:
         try:
@@ -35,3 +44,10 @@ class HealthRepository:
             logger.warning("Elasticsearch health check failed: %s", type(exc).__name__)
             return False
         return True
+
+    def llm_is_available(self) -> bool:
+        try:
+            return self._classifier.is_ready()
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+            logger.warning("LLM health check failed: %s", type(exc).__name__)
+            return False

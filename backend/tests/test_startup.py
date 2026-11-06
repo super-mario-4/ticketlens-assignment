@@ -14,7 +14,8 @@ def test_application_starts_and_stops() -> None:
 def test_health_routes_are_registered() -> None:
     paths = create_app().openapi()["paths"]
 
-    assert {"/api/health/live", "/api/health/ready"} <= paths.keys()
+    assert {"/api/health/live", "/api/health/ready", "/api/imports"} <= paths.keys()
+    assert "/api/tickets/{ticket_id}/reclassify" in paths
 
 
 def test_settings_require_a_database_password(monkeypatch: pytest.MonkeyPatch) -> None:

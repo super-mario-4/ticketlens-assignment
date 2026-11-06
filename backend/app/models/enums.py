@@ -58,6 +58,17 @@ class ImportStatus(StrEnum):
     FAILED = "failed"
 
 
+class OutboxOperation(StrEnum):
+    INDEX = "index"
+    DELETE = "delete"
+
+
+class OutboxStatus(StrEnum):
+    PENDING = "pending"
+    DONE = "done"
+    FAILED = "failed"
+
+
 class UserRole(StrEnum):
     OPERATOR = "operator"
     LEAD = "lead"
@@ -75,3 +86,5 @@ CATEGORY_TYPE = _pg_enum(Category, "ticket_category")
 PRIORITY_TYPE = _pg_enum(Priority, "ticket_priority")
 IMPORT_STATUS_TYPE = _pg_enum(ImportStatus, "import_status")
 USER_ROLE_TYPE = _pg_enum(UserRole, "user_role")
+OUTBOX_OPERATION_TYPE = _pg_enum(OutboxOperation, "outbox_operation")
+OUTBOX_STATUS_TYPE = _pg_enum(OutboxStatus, "outbox_status")

@@ -5,6 +5,11 @@ x-postgres-env: &postgres-env
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ticketlens}
   POSTGRES_DB: ${POSTGRES_DB:-ticketlens}
 
+x-llm-env: &llm-env
+  LLM_BASE_URL: ${LLM_BASE_URL:-http://llm:11434/v1}
+  LLM_MODEL: ${LLM_MODEL:-qwen3.6:35b-a3b}
+  LLM_TIMEOUT: ${LLM_TIMEOUT:-60}
+
 services:
   postgres:
     image: postgres:17.5-alpine
@@ -40,9 +45,16 @@ services:
       context: ./backend
       target: runtime
     environment:
-      <<: *postgres-env
+      <<: [*postgres-env, *llm-env]
       POSTGRES_HOST: postgres
       ELASTICSEARCH_URL: http://elasticsearch:9200
+      JWT_SECRET: ${JWT_SECRET:-ticketlens-local-demo-secret-not-for-production}
+      OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:-operator}
+      LEAD_PASSWORD: ${LEAD_PASSWORD:-lead}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config:/app/config:ro
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
@@ -56,6 +68,65 @@ services:
       start_period: 15s
     restart: unless-stopped
 
+  worker:
+    build:
+      context: ./backend
+      target: runtime
+    command: ["python", "-m", "app.worker"]
+    environment:
+      <<: [*postgres-env, *llm-env]
+      POSTGRES_HOST: postgres
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-3}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config:/app/config:ro
+    # Not on `llm`: the worker takes tickets by itself once the model is ready (TRD section 13).
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+  # The first start downloads the model into the volume, about 23 GB (ADR-0001).
+  llm:
+    image: ollama/ollama:0.40.15
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        ollama serve &
+        until ollama list > /dev/null 2>&1; do sleep 1; done
+        until ollama pull "$$LLM_MODEL"; do sleep 30; done
+        wait
+    environment:
+      LLM_MODEL: ${LLM_MODEL:-qwen3.6:35b-a3b}
+      OLLAMA_NUM_PARALLEL: ${WORKER_CONCURRENCY:-3}
+    volumes:
+      - llm_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama show \"$$LLM_MODEL\" > /dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 6h
+    restart: unless-stopped
+
   # On demand only: docker compose run --rm --build tests
   tests:
     profiles: ["test"]
@@ -67,12 +138,33 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_DB: ticketlens_test
       ELASTICSEARCH_URL: http://elasticsearch:9200
+      SEARCH_INDEX: tickets_test
+    volumes:
+      - ./data:/data:ro
+      - ./config:/app/config:ro
+      - ./eval:/app/eval:ro
     depends_on:
       postgres:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
 
+  # On demand only: make eval, make bench. The report goes to stdout.
+  eval:
+    profiles: ["tools"]
+    build:
+      context: ./backend
+      target: runtime
+    command: ["python", "-m", "app.evaluation", "eval", "eval/labels.csv"]
+    environment:
+      <<: [*postgres-env, *llm-env]
+      POSTGRES_HOST: postgres
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-3}
+    volumes:
+      - ./config:/app/config:ro
+      - ./eval:/app/eval:ro
+
 volumes:
   postgres_data:
   elasticsearch_data:
+  llm_data:

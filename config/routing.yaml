@@ -1,0 +1,14 @@
+# Category to team (PRD section 7, ADR-0004). The model never chooses a team.
+# `other` has no team: those tickets go to the manual review queue.
+teams:
+  payments_transfers: Payments
+  technical_issues: Tech Support
+  account_access: Account Support
+  card_issues: Cards
+  fees_charges: Billing
+  credit_installments: Lending
+  identity_verification: Verification
+  security_fraud: Security / Fraud
+  refunds: Refunds
+  support_complaints: Support QA
+  feature_request: Product

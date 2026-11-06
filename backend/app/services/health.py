@@ -11,12 +11,13 @@ class HealthService:
         self._repository = repository
 
     def readiness(self) -> ReadinessResponse:
-        """Only PostgreSQL decides readiness; Elasticsearch is reported (TRD sections 6 and 10)."""
+        """Only PostgreSQL decides readiness; the others are reported (TRD sections 6 and 10)."""
         postgres_available = self._repository.postgres_is_available()
         return ReadinessResponse(
             status="ready" if postgres_available else "not_ready",
             components=ReadinessComponents(
                 postgres=_component_status(postgres_available),
                 elasticsearch=_component_status(self._repository.elasticsearch_is_available()),
+                llm=_component_status(self._repository.llm_is_available()),
             ),
         )

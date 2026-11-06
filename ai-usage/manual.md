@@ -71,3 +71,67 @@ ChatGPT-5 (web)
 
 > endi keyingi bosqich uchun buyruq yozamiz "> " .
 ```
+
+```markdown
+## 2026-11-06 18:26
+
+ChatGPT-5 (web)
+
+> muvaffaqiyatli bo'ldi keyingi bosqichga o'tamiz "> " .
+```
+
+```markdown
+## 2026-11-06 18:57
+
+ChatGPT-5 (web)
+
+> menga API endpointi berdi, lekin uni fayl sifatida emas oddiy text sifatida yozsa bo'ladigan qilib berdi "> " .
+```
+
+```markdown
+## 2026-11-06 19:14
+
+ChatGPT-5 (web)
+
+> tog'rilandi keyingi bosqichga o'tamiz "> " .
+```
+
+```markdown
+## 2026-11-06 19:29
+
+ChatGPT-5 (web)
+
+> endi keyingi bosqich, keyingi bosqichda ADR-0001 da qaysi runtime llm aytilgan bo'lsa shuni yozsin, shuni ham qo'shib ket "> " .
+```
+
+```markdown
+## 2026-11-06 20:16
+
+ChatGPT-5 (web)
+
+> docker compose exec postgres psql -U ticketlens -d ticketlens -c "SELECT status, COUNT(\*) FROM tickets GROUP BY status ORDER BY status;" burug'ini bergandim faqat ikkita status chiqyapti pending va needs_review pending ticket hali processing jarayonidan o'tmagan bo'lishi mumkinmi buni qanday tekshirish mumkin "> " .
+```
+
+```markdown
+## 2026-11-06 20:16
+
+ChatGPT-5 (web)
+
+> yaxshi u to'lguncha keyingi bosqichni davom ettirib turamiz "> " .
+```
+
+```markdown
+## 2026-11-06 23:00
+
+ChatGPT-5 (web)
+
+> keyingi bosqichga o'tamiz "> " .
+```
+
+```markdown
+## 2026-11-06 01:30
+
+ChatGPT-5 (web)
+
+> Login va parol hato berdi "> " .
+```

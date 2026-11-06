@@ -3,12 +3,24 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ColumnElement, Select, case, delete, func, select, update
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import (
+    UUID,
+    ColumnElement,
+    Select,
+    case,
+    cast,
+    delete,
+    exists,
+    func,
+    select,
+    update,
+)
+from sqlalchemy.dialects.postgresql import ARRAY, array, insert
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Classification, Correction, Ticket
 from app.models.enums import Category, Channel, Priority, ReviewReason, TicketStatus
+from app.schemas.tickets import CountRow, StatsResponse
 
 
 @dataclass(frozen=True)
@@ -18,6 +30,8 @@ class TicketFilters:
     team: str | None = None
     channel: Channel | None = None
     status: TicketStatus | None = None
+    # Search results, best first. When set, these are the only tickets, in this order.
+    ranked_ids: list[uuid.UUID] | None = None
 
 
 @dataclass(frozen=True)
@@ -145,10 +159,12 @@ class TicketRepository:
         query = _effective_query()
         statement = query.statement
 
-        if filters.status is None:
-            statement = statement.where(Ticket.status != TicketStatus.NEEDS_REVIEW)
-        else:
+        if filters.status is not None:
             statement = statement.where(Ticket.status == filters.status)
+        elif filters.ranked_ids is None:
+            statement = statement.where(Ticket.status != TicketStatus.NEEDS_REVIEW)
+        if filters.ranked_ids is not None:
+            statement = statement.where(Ticket.id.in_(filters.ranked_ids))
         if filters.channel is not None:
             statement = statement.where(Ticket.channel == filters.channel)
         if filters.category is not None:
@@ -160,11 +176,69 @@ class TicketRepository:
 
         total = self._session.scalar(select(func.count()).select_from(statement.subquery()))
 
-        ordering = [Ticket.created_at, Ticket.id]
-        if filters.status is not TicketStatus.NEEDS_REVIEW:
+        ordering: list[Any] = [Ticket.created_at, Ticket.id]
+        if filters.ranked_ids is not None:
+            ranking = cast(array(filters.ranked_ids, type_=UUID), ARRAY(UUID))
+            ordering.insert(0, func.array_position(ranking, Ticket.id))
+        elif filters.status is not TicketStatus.NEEDS_REVIEW:
             ordering.insert(0, query.priority.asc().nulls_last())
-        rows = self._session.execute(statement.order_by(*ordering).limit(limit).offset(offset))
+        rows = self._session.execute(
+            statement.options(selectinload(Ticket.classifications))
+            .order_by(*ordering)
+            .limit(limit)
+            .offset(offset)
+        )
         return TicketPage(items=[TicketView(*row) for row in rows], total=total or 0)
+
+    def stats(self, start: datetime | None, end: datetime | None) -> StatsResponse:
+        """Definitions: TRD section 6. Grouped by effective values."""
+        statement = _effective_query().statement
+        if start is not None:
+            statement = statement.where(Ticket.ingested_at >= start)
+        if end is not None:
+            statement = statement.where(Ticket.ingested_at < end)
+        tickets = statement.subquery()
+
+        def counts(column: ColumnElement[Any]) -> list[CountRow]:
+            rows = self._session.execute(
+                select(column, func.count()).group_by(column).order_by(func.count().desc())
+            )
+            return [
+                CountRow(name=None if name is None else str(name), count=count)
+                for name, count in rows
+            ]
+
+        classified = exists().where(Classification.ticket_id == tickets.c.id)
+        corrected = exists().where(Correction.ticket_id == tickets.c.id)
+        totals = self._session.execute(
+            select(
+                func.count().label("total"),
+                func.count().filter(tickets.c.review_reason.is_not(None)).label("review"),
+                func.count().filter(classified).label("ai"),
+                func.count().filter(classified, corrected).label("corrected"),
+                func.count(tickets.c.classified_at).label("routed"),
+                func.avg(
+                    func.extract("epoch", tickets.c.classified_at - tickets.c.ingested_at)
+                ).label("routing_seconds"),
+            )
+        ).one()
+
+        return StatsResponse(
+            total=totals.total,
+            by_status=counts(tickets.c.status),
+            by_team=counts(tickets.c.effective_team),
+            by_category=counts(tickets.c.effective_category),
+            by_priority=counts(tickets.c.effective_priority),
+            review_total=totals.review,
+            review_share=totals.review / totals.total if totals.total else 0,
+            ai_classified=totals.ai,
+            corrected=totals.corrected,
+            correction_share=totals.corrected / totals.ai if totals.ai else 0,
+            routing_count=totals.routed,
+            routing_seconds_avg=(
+                None if totals.routing_seconds is None else float(totals.routing_seconds)
+            ),
+        )
 
     def add_classification(self, classification: Classification) -> None:
         self._session.add(classification)
@@ -203,6 +277,21 @@ class TicketRepository:
             .values(status=TicketStatus.PENDING, processing_started_at=None)
         )
         return result.rowcount
+
+    def requeue_failed(self, ticket_id: uuid.UUID) -> bool:
+        """Queues a ticket again after a model failure (TRD section 6). Other tickets stay where
+        they are, so one held as a suspected injection cannot be sent to a model this way."""
+        requeued = self._session.scalar(
+            update(Ticket)
+            .where(
+                Ticket.id == ticket_id,
+                Ticket.status == TicketStatus.NEEDS_REVIEW,
+                Ticket.review_reason.in_((ReviewReason.LLM_UNAVAILABLE, ReviewReason.SCHEMA_ERROR)),
+            )
+            .values(status=TicketStatus.PENDING, review_reason=None)
+            .returning(Ticket.id)
+        )
+        return requeued is not None
 
     def delete_ingested_before(self, cutoff: datetime) -> list[uuid.UUID]:
         """Deletes expired tickets and, by cascade, their history. Returns the deleted IDs."""

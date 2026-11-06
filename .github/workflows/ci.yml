@@ -1,0 +1,55 @@
+name: CI
+
+# TRD section 14. Steps use the project's own Compose file, so CI and local runs match.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Lint and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      # `ruff check` and `pytest`, with real PostgreSQL and Elasticsearch containers.
+      - name: Run lint and tests
+        run: docker compose run --rm --build tests
+
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs --no-color postgres elasticsearch
+
+  images:
+    name: Docker images and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      # The `web` image runs `npm ci`, the type check, lint and the build.
+      - name: Build all images
+        run: docker compose --profile test build
+
+      # `llm` and `worker` stay off: the model is not downloaded in CI (TRD section 14).
+      - name: Start services
+        run: docker compose up -d --wait postgres elasticsearch api web
+
+      - name: Check health endpoints
+        run: |
+          curl --fail --silent --show-error http://localhost:8000/api/health/live
+          curl --fail --silent --show-error http://localhost:8000/api/health/ready
+          curl --fail --silent --show-error --output /dev/null http://localhost:3000/
+          curl --fail --silent --show-error http://localhost:3000/api/health/live
+
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop services
+        if: always()
+        run: docker compose down -v

@@ -52,7 +52,22 @@ Usage: 41K tokens, $0.32 (what the tool shows; "unknown" if it shows nothing)
 ```
 
 ```markdown
-## 2026-11-06 13:11 ChatGPT-5 (web)
+## 2026-11-06 15:11 ChatGPT-5 (web)
 
 > Ohirgi marta tekshiraylik yuqoridagi talablar bajarilganini "> " .
+```
+
+```markdown
+## 2026-11-06 15:29 ChatGPT-5 (web)
+
+> Claude Code'ga butun backendni yozmasdan qisqa va aniq prompt berib bosqichma bosqich yaratishni so'rab promptlar yozamiz. "> " .
+> avvalishlar ketma ketligini belgilab olaylik!
+```
+
+```markdown
+## 2026-11-06 18:13
+
+ChatGPT-5 (web)
+
+> endi keyingi bosqich uchun buyruq yozamiz "> " .
 ```

@@ -1,0 +1,78 @@
+name: ticketlens
+
+x-postgres-env: &postgres-env
+  POSTGRES_USER: ${POSTGRES_USER:-ticketlens}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ticketlens}
+  POSTGRES_DB: ${POSTGRES_DB:-ticketlens}
+
+services:
+  postgres:
+    image: postgres:17.5-alpine
+    environment: *postgres-env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # TCP, because the temporary server used during first-time init listens on the socket only.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.2
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s'"]
+      interval: 10s
+      timeout: 8s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      <<: *postgres-env
+      POSTGRES_HOST: postgres
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/api/health/live', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+
+  # On demand only: docker compose run --rm --build tests
+  tests:
+    profiles: ["test"]
+    build:
+      context: ./backend
+      target: test
+    environment:
+      <<: *postgres-env
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ticketlens_test
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  elasticsearch_data:

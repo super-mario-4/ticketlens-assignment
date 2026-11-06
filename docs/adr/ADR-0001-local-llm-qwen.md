@@ -2,6 +2,7 @@
 
 - **Sana:** 2026-11-05
 - **Tegishli hujjatlar:** PRD 5–9-bo‘limlar, TRD 2, 7, 9, 13-bo‘limlar
+- **Holat:** runtime o‘zgarishi (LM Studio → Compose’dagi Ollama) muallif tasdig‘ini kutmoqda
 
 ## Kontekst
 
@@ -9,22 +10,27 @@ TicketLens mijoz murojaatlarini o‘zbek (lotin va kirill), rus va aralash tilla
 
 Murojaatlarda karta, telefon va pasport kabi maxfiy ma’lumotlar uchrashi mumkin. Shu sababli AI xizmatini lokal ishlatish maqsadga muvofiq.
 
+Topshiriqning majburiy talabi: butun tizim faqat Docker o‘rnatilgan toza Linux mashinada bitta buyruq bilan ishga tushishi kerak. AI tasniflash tizimning asosiy qismi, shuning uchun u Docker’dan tashqaridagi dasturga bog‘liq bo‘lishi mumkin emas.
+
 ## Qaror
 
-MVP uchun Qwen3.6-35B-A3B modeli LM Studio orqali lokal ishlatiladi. Backend model bilan OpenAI-compatible HTTP API orqali bog‘lanadi.
+MVP uchun Qwen3.6-35B-A3B modeli Docker Compose ichidagi `llm` servisida (Ollama) lokal ishlatiladi. Backend model bilan OpenAI-compatible HTTP API orqali bog‘lanadi.
 
-- Model: Qwen3.6-35B-A3B.
-- Runtime: LM Studio.
+- Model: Qwen3.6-35B-A3B (Ollama’da `qwen3.6:35b-a3b`, taxminan 23 GB).
+- Runtime: Ollama, Compose servisi; model birinchi ishga tushishda Docker volume’ga avtomatik yuklanadi.
 - API: OpenAI-compatible Chat Completions.
-- Model sozlamalari `.env` orqali boshqariladi.
+- Model sozlamalari muhit o‘zgaruvchilari orqali boshqariladi; Compose’da standart qiymatlar bor, `.env` ixtiyoriy.
+- LM Studio majburiy emas: ishlab chiquvchi tezroq ishlash uchun `LLM_BASE_URL` orqali hostdagi LM Studio’ga ulanishi mumkin.
 - LLM javobi JSON schema orqali tekshiriladi.
 - Xato yoki mavjud bo‘lmagan LLM so‘rovi qo‘lda tekshirishga yuboriladi.
 
 ## Ko‘rib chiqilgan alternativalar
 
-1. **Bulutli LLM API:** maxfiy ma’lumotlar va tashqi provayderga bog‘liqlik xavfi mavjud.
+1. **Bulutli LLM API:** tashqi provayderga bog‘liqlik va API kaliti kerak; kalitsiz bitta buyruq bilan ishga tushmaydi.
 2. **Bir nechta lokal model:** MVP uchun ortiqcha murakkablik keltiradi.
 3. **Modelni ilova ichida boshqarish:** qo‘shimcha infratuzilma talab qiladi.
+4. **Faqat hostdagi LM Studio (dastlabki reja):** toza mashinada Docker’dan tashqari dastur talab qiladi va topshiriqqa zid.
+5. **LLM stub bilan ishga tushirish:** tizim haqiqiy tasnif bermaydi; stub faqat testlar uchun.
 
 ## Oqibatlar
 
@@ -33,14 +39,15 @@ MVP uchun Qwen3.6-35B-A3B modeli LM Studio orqali lokal ishlatiladi. Backend mod
 - AI so‘rovlari tashqi provayderga yuborilmaydi.
 - API integratsiyasi sodda bo‘ladi.
 - Model natijalarini lokal benchmark qilish mumkin.
+- Docker’dan boshqa dastur talab qilinmaydi.
 
 ### Salbiy
 
-- LM Studio alohida ishga tushirilishi kerak.
-- Model katta xotira talab qilishi mumkin.
-- Ishlash tezligi kompyuter resurslariga bog‘liq.
+- Birinchi ishga tushish model yuklanguncha cho‘ziladi (taxminan 23 GB).
+- Model katta xotira va disk talab qiladi.
+- Toza mashinada CPU’da ishlaydi; ishlash tezligi kompyuter resurslariga bog‘liq va PRD’dagi yo‘naltirish vaqti maqsadiga yetmasligi mumkin.
 - Model ishlamasa, ticket qo‘lda tekshirishga yuboriladi.
 
 ## Qayta ko‘rib chiqish shartlari
 
-Agar model PRD'dagi aniqlik, Critical recall yoki tezlik maqsadlariga erishmasa, boshqa modellar benchmark qilinadi.
+Agar model PRD'dagi aniqlik, Critical recall yoki tezlik maqsadlariga erishmasa yoki maqsadli mashinada ishga tushmasa, boshqa modellar (jumladan kichikroq lokal model) benchmark qilinadi.

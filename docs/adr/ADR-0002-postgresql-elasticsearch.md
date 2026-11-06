@@ -9,6 +9,8 @@ TicketLens ticketlarni saqlashi, qayta ishlashi, operator tuzatishlari va audit 
 
 Kutilayotgan yuklama kuniga taxminan 3 000 ta murojaat.
 
+Topshiriq ro‘yxatdagi kamida bitta yangi texnologiyani ishlatishni majburiy qiladi (ClickHouse, Elasticsearch, Temporal, Qdrant yoki k3s + Helm). Ushbu loyihada u Elasticsearch.
+
 ## Qaror
 
 PostgreSQL tizimning asosiy ma’lumotlar ombori bo‘ladi. Elasticsearch faqat matnli qidiruv uchun ishlatiladi.
@@ -22,7 +24,7 @@ PostgreSQL tizimning asosiy ma’lumotlar ombori bo‘ladi. Elasticsearch faqat 
 
 ## Ko‘rib chiqilgan alternativalar
 
-1. **Faqat PostgreSQL:** sodda, lekin ko‘p tilli matnli qidiruv imkoniyatlari cheklangan.
+1. **Faqat PostgreSQL:** sodda, lekin ko‘p tilli matnli qidiruv imkoniyatlari cheklangan va topshiriqning yangi texnologiya talabini bajarmaydi.
 2. **Elasticsearch'ni asosiy ombor qilish:** tranzaksion ma’lumotlar uchun qo‘shimcha murakkablik tug‘diradi.
 3. **Kafka yoki boshqa broker:** MVP uchun ortiqcha infratuzilma.
 
@@ -42,4 +44,4 @@ PostgreSQL tizimning asosiy ma’lumotlar ombori bo‘ladi. Elasticsearch faqat 
 
 ## Qayta ko‘rib chiqish shartlari
 
-Agar PostgreSQL qidiruvi PRD talablarini yetarli darajada bajarsa yoki Elasticsearch resurs sarfi yuqori bo‘lsa, qaror qayta baholanadi.
+Agar Elasticsearch resurs sarfi yuqori bo‘lsa, qaror qayta baholanadi. Elasticsearch’dan voz kechilsa, uning o‘rniga topshiriq ro‘yxatidagi boshqa yangi texnologiya tanlanishi shart.

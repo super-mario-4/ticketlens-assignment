@@ -70,7 +70,7 @@ Yechim: AI har bir murojaatni kategoriya va ustuvorlik bo‘yicha tasniflaydi, q
 
 **F4.** Har bir murojaat uchun qisqa xulosa (o‘zbek tilida, taklif).
 
-**F5.** Murojaatni kategoriyasiga qarab tegishli jamoaga yo‘naltirish.
+**F5.** Murojaatni kategoriyasiga qarab tegishli jamoaga yo‘naltirish. MVP’da “yuborish” ticketga jamoa biriktirish va uni navbatda jamoa bo‘yicha ko‘rsatishni anglatadi; tashqi tizimga yetkazish yo‘q.
 
 **F6.** Operator navbati: avval ustuvorlik (Critical → Low), keyin kelgan vaqt. Qo‘lda tekshirish navbati alohida.
 
@@ -155,7 +155,9 @@ Murojaat quyidagi hollarda avtomatik ravishda qo‘lda tekshirish navbatiga yubo
 
 - matnda AI’ga buyruq berishga urinish bor;
 
-- AI javobi noto‘g‘ri formatda keldi yoki xizmat javob bermadi.
+- AI javobi noto‘g‘ri formatda keldi yoki xizmat javob bermadi;
+
+- maxfiy ma’lumotni maskalashda xato yuz berdi.
 
 Operator bunday murojaatni ko‘rib chiqadi, kategoriya, ustuvorlik va jamoani belgilaydi yoki tuzatadi.
 
@@ -171,7 +173,7 @@ Operator bunday murojaatni ko‘rib chiqadi, kategoriya, ustuvorlik va jamoani b
 | Qo‘lda tekshirishga tushganlar       | ≤ 15%                                                                                                         |
 | Yo‘naltirish vaqti                   | Murojaat tushganidan jamoaga yo‘naltirilgunga qadar o‘rtacha 1 daqiqadan kam                                  |
 | Birinchi javob vaqti (uzoq muddatli) | 9 soatdan 1 soatdan kamga tushishiga hissa qo‘shish; tizim ishga tushgandan keyin kuzatiladi                  |
-| Ishga tushirish va CI                | Bitta buyruq bilan ishga tushadi; testlar va CI muvaffaqiyatli o‘tadi                                         |
+| Ishga tushirish va CI                | Faqat Docker o‘rnatilgan toza Linux mashinada butun tizim (AI modeli bilan) bitta buyruq bilan ishga tushadi; har bir push’da CI testlarni o‘tkazadi va image’larni build qiladi; yakuniy commit’da CI muvaffaqiyatli o‘tadi |
 
 Operator noto‘g‘ri tasniflarni tuzata olishi mezon emas, funksional talab (F7).
 
@@ -182,10 +184,10 @@ Support rahbari bildirgan talablar bo‘yicha qarorlar:
 | **№** | **Talab**                                                        | **Qaror va sabab**                                                                                                                                                                                                                                                                                 |
 | ----- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1     | Har bir ticket avtomatik tasniflanib, to‘g‘ri jamoaga yuborilsin | Qabul qilinadi (MVP). Mazmunsiz, noaniq va shubhali murojaatlar bundan mustasno: ularni “taxmin qilish” noto‘g‘ri yo‘naltirishga olib keladi, shuning uchun qo‘lda tekshiriladi.                                                                                                                   |
-| 2     | Har bir ticket uchun qisqa xulosa                                | Qabul qilinadi (MVP). Mazmunsiz murojaatlar uchun xulosa yaratilmaydi.                                                                                                                                                                                                                             |
+| 2     | Har bir ticket uchun qisqa xulosa                                | Qabul qilinadi (MVP). Mazmunsiz murojaatlar va AI’ga buyruq berishga urinish aniqlangan murojaatlar uchun xulosa yaratilmaydi: birinchisida xulosa qilinadigan mazmun yo‘q, ikkinchisi AI’ga yuborilmaydi (F11).                                                                                  |
 | 3     | Barcha xabarlar, karta raqamlari bilan, doimiy saqlansin         | Rad etiladi. Karta raqami, CVV va pasportni saqlash xavfsizlik va maxfiylik xavfi, CVV’ni saqlash umuman mumkin emas (namuna datasetning o‘zida ular bor). Maskalangan matn va operator tuzatishlari tarixi cheklangan muddat saqlanadi (taklif: 90 kun); audit uchun shu yetarli deb hisoblanadi. |
 | 4     | 99.99% uptime                                                    | MVP uchun kafolatlanmaydi (7 kunlik loyiha, bitta Docker Compose). Kelajakdagi production maqsadi sifatida qayd etiladi.                                                                                                                                                                           |
-| 5     | Eng yaxshi AI modeli, narx muhim emas                            | Qisman qabul qilinadi. Model etalon to‘plamdagi natijalarga (aniqlik, ishonchlilik, buyruqlarga chidamlilik) qarab tanlanadi, “eng qimmat” avtomatik “eng yaxshi” emas. Narx cheklov emas, lekin 1 000 ticket narxi o‘lchab boriladi.                                                              |
+| 5     | Eng yaxshi AI modeli, narx muhim emas                            | Qisman qabul qilinadi. Standart model (ADR-0001) etalon to‘plamdagi natijalar (aniqlik, ishonchlilik, buyruqlarga chidamlilik) bilan tekshiriladi va 9-bo‘limdagi maqsadlarga erishmasa almashtiriladi; “eng qimmat” avtomatik “eng yaxshi” emas. Narx cheklov emas, lekin 1 000 ticket narxi o‘lchab boriladi.                                                              |
 | 6     | Operatorlar uchun navbat va tuzatish ekrani                      | Qabul qilinadi (MVP): F6, F7, F9.                                                                                                                                                                                                                                                                  |
 
 # 11. Taxminlar va ochiq savollar
@@ -195,5 +197,5 @@ Support rahbari bildirgan talablar bo‘yicha qarorlar:
 | Kompaniyadagi haqiqiy jamoalar ro‘yxati qanday?                                                                   | 7-bo‘limdagi jamoalar            |
 | Audit uchun nima kerak: asl matnmi yoki maskalangan matn va tuzatishlar tarixi yetarlimi? Saqlash muddati qancha? | Maskalangan matn yetarli, 90 kun |
 | Birinchi javob vaqti qayerda qayd etiladi va undan o‘lchash uchun foydalanish mumkinmi?                           | Mumkin emas, MVP’da o‘lchanmaydi |
-| Maskalangan matnni tashqi AI provayderiga yuborish mumkinmi (shaxsiy ma’lumotlarni saqlash talablari)?            | Mumkin, faqat maskalangan matn   |
+| Maskalangan matnni tashqi AI provayderiga yuborish mumkinmi (shaxsiy ma’lumotlarni saqlash talablari)?            | MVP’da kerak emas: model lokal ishlaydi, tashqi provayderga hech narsa yuborilmaydi |
 | Xulosa qaysi tilda bo‘lsin?                                                                                       | O‘zbek tilida (lotin)            |

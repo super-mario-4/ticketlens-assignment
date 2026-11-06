@@ -16,6 +16,7 @@ One entry per prompt:
 
 ```markdown
 ## 2026-11-05 14:30 · ChatGPT (web) · GPT-5
+
 > The prompt, word for word. Every line starts with "> ".
 > Replace secrets such as API keys with [REDACTED].
 ```
@@ -23,7 +24,29 @@ One entry per prompt:
 When a session or chat ends, add one line under its last entry:
 
 ```markdown
-Usage: 41K tokens, $0.32   (what the tool shows; "unknown" if it shows nothing)
+Usage: 41K tokens, $0.32 (what the tool shows; "unknown" if it shows nothing)
 ```
 
 ---
+
+```markdown
+## 2026-11-06 ChatGPT-5 (web)
+
+> proyektni o'rganib chiqib hatolari bo'lsa to'g'rilashini aytib bu proyekt shunchaki menga berilgan taskligini va uni diqqat "> " .
+> bilan o'qib chiqib men yaratgan narsalarimda asosan TRD, PRD va ADRlarni yaratganman holos mana shular taskka "> " .
+> noto'g'ri joylangan bo'lsa uni taskka moslab to'g'rilashim kerakligini aytadigan bitta prompt yozib ber ingliz tilida "> " .
+```
+
+```markdown
+## 2026-11-06 15:00 ChatGPT-5 (web)
+
+> `README.md` faylini ushbu repository'dagi oxirgi commit holatiga (`HEAD`) to‘liq qaytar. "> " .
+> Talablar: "> " .
+>
+> - Faqat `README.md` faylini tikla. "> " .
+> - Boshqa fayllarga tegma. "> " .
+> - `README.md` ichidagi barcha o‘zgarishlarni bekor qil. "> " .
+> - Keyingi ishlar davomida `README.md` faylini hech qanday tarzda o‘zgartirma, tahrir qilma yoki formatlama. "> " .
+> - Uni faqat o‘qish mumkin, tahrirlash taqiqlangan. "> " .
+>   Avval Git orqali holatini tekshir, so‘ng faqat shu faylni tikla. Yakunda bajarilgan ishni tasdiqla. "> " .
+```

@@ -17,12 +17,11 @@ TicketLens deterministic rule-based routing yondashuvidan foydalanadi.
 Routing quyidagi tartibda amalga oshiriladi:
 
 1. AI tomonidan aniqlangan category, priority va confidence qiymatlari tekshiriladi.
-2. Confidence belgilangan threshold'dan (0.7) past bo'lsa, ticket `manual_review` holatiga yuboriladi.
-3. `security_fraud` kabi xavfsizlik bilan bog'liq murojaatlar tegishli xavfsizlik jamoasiga yo'naltiriladi.
-4. Qolgan kategoriyalar oldindan belgilangan routing qoidalari orqali tegishli support jamoalariga yuboriladi.
-5. Aniqlanmagan yoki mos kelmaydigan kategoriyalar `general_support` yoki `manual_review` yo'nalishiga yuboriladi.
+2. Confidence belgilangan threshold'dan (0.7) past bo'lsa, ticket `needs_review` holatiga o'tadi (`low_confidence`).
+3. `category = other` bo'lsa, ticket `needs_review` holatiga o'tadi (`unclear`).
+4. Qolgan kategoriyalar uchun jamoa `config/routing.yaml` dan olinadi (PRD 7-bo'lim), ticket `classified` holatiga o'tadi.
 
-Routing qoidalari konfiguratsiya orqali boshqariladi. AI modeli to'g'ridan-to'g'ri routing qarorini qabul qilmaydi.
+Routing qoidalari konfiguratsiya orqali boshqariladi. AI modeli to'g'ridan-to'g'ri routing qarorini qabul qilmaydi. Alohida umumiy jamoa yo'q: mos kelmagan murojaatlarni operator qo'lda tekshirish navbatida ko'rib chiqadi.
 
 ## Alternatives Considered
 

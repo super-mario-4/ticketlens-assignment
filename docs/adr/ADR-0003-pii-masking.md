@@ -7,7 +7,7 @@
 
 Ticket matnlarida karta raqami, CVV/CVC, karta muddati, pasport va telefon raqamlari uchrashi mumkin.
 
-PRD maxfiy ma’lumotlarning bazada va AI so‘rovlarida saqlanmasligini talab qiladi.
+Support rahbari barcha xom xabarlarni, karta raqamlari bilan, audit uchun abadiy saqlashni so‘ragan (topshiriq, 3-talab). PRD 10-bo‘limda bu talab asoslangan holda rad etilgan: maxfiy ma’lumotlar bazada va AI so‘rovlarida bo‘lmasligi kerak.
 
 ## Qaror
 
@@ -25,7 +25,7 @@ Ticket matni PostgreSQL'ga yozilishidan, Elasticsearch'ga indekslanishidan yoki 
 ## Ko‘rib chiqilgan alternativalar
 
 1. **Faqat LLM'dan oldin maskalash:** bazada yoki loglarda maxfiy ma’lumot qolishi mumkin.
-2. **Xom matnni shifrlab saqlash:** PRD talabiga mos emas.
+2. **Xom matnni shifrlab saqlash:** CVV shifrlangan holda ham saqlanmasligi kerak, kalit sizib chiqsa esa barcha karta ma’lumotlari ochiladi; audit uchun maskalangan matn va tuzatishlar tarixi yetarli deb hisoblanadi.
 3. **Faqat frontendda maskalash:** backend va AI qatlamini himoya qilmaydi.
 
 ## Oqibatlar

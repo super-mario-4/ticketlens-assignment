@@ -10,18 +10,22 @@ Asosiy AI agent sessiyalari, muhim promptlar, agent xato qilgan holatlar va ular
 | `2026-11-06_claude_105e3fbd` | Claude Code 2.1.318 | 11-06 09:08 | 1 | $0; ish bajarilmagan |
 | `2026-11-06_claude_4cccfcf6` | Claude Code 2.1.319, Opus 5.5 (+ Haiku 5.5) | 11-06 09:15 – 20:32 | 17 | **$36.45**; Opus: 15K kirish, 610K chiqish, 195K fikrlash, 78.0M cache o‘qish, 1.07M cache yozish token; Haiku: $0.02. 11 536 qator qo‘shilgan |
 | `2026-11-07_claude_c064d082` | Claude Code, Opus 5.5 | 11-07 07:58 – davom etmoqda | 11 (shu yozuvgacha) | Sessiya hali tugamagan: `end` qatori yo‘q, xarajat **noma’lum** |
+| `ai-usage/manual.md` | ChatGPT-5 (web) | 11-06, 15:00 – 23:00 va “01:30” (yozuvdagi vaqtlar, vaqt zonasi ko‘rsatilmagan) | 13 | Yozuvlarda `Usage:` qatori yo‘q, xarajat **noma’lum** |
 
-Jami yozilgan xarajat: **$36.45** (faqat tugagan sessiyalar).
+Jami yozilgan xarajat: **$36.45** (faqat tugagan Claude Code sessiyalari; ChatGPT xarajati yozilmagan).
 
 ## Kim nima qildi
 
 - **AI agent (Claude Code):** backend, frontend, testlar, Docker va CI kodi; `eval/labels.csv` dagi belgilar; baholash va benchmark ishga tushirish; PRD/TRD/ADR’ga tuzatishlar; ushbu log, README, AGENTS.md, learning note qoralamasi; tekshirish workbook’lari.
-- **Egasi (muallif):** har bir bosqich vazifasi va cheklovlari (promptlar); 2026-11-05 dagi PRD, TRD va ADR commit’lari; README’ni asl holatiga qaytarish va keyinroq (2026-11-07) o‘zbekcha README’ga ruxsat berish; ADR-0001 bo‘yicha ishlashni buyurish; ishlab turgan bazani testlardan himoya qilish talabi; `LLM_TIMEOUT=120` ga oshirish, 7 ta ticketni qayta tasniflash va konteynerlarni qayta yaratish qarori; `3765a8b` commit’i.
-- **Egasi hali qilmagan:** belgilarni tekshirish (`eval/README.md`), learning note’ning shaxsiy qismlari, ADR-0001 ni rasman tasdiqlash.
+- **ChatGPT-5 (web), egasi ishlatgan:** Claude Code uchun bosqichma-bosqich promptlarni tayyorlash, loyihani topshiriq bilan solishtirish uchun prompt yozish, README’ni tiklash buyrug‘ini tuzish, login xatosini muhokama qilish (`ai-usage/manual.md`, 13 ta yozuv).
+- **Egasi (muallif):** har bir bosqich vazifasi va cheklovlari (promptlar); 2026-11-05 dagi PRD, TRD va ADR commit’lari (egasining `manual.md` dagi birinchi yozuviga ko‘ra, PRD, TRD va ADR’larni u o‘zi yaratgan); README’ni asl holatiga qaytarish va keyinroq (2026-11-07) o‘zbekcha README’ga ruxsat berish; ADR-0001 bo‘yicha ishlashni buyurish; ishlab turgan bazani testlardan himoya qilish talabi; `LLM_TIMEOUT=120` ga oshirish, 7 ta ticketni qayta tasniflash va konteynerlarni qayta yaratish qarori; `3765a8b` commit’i.
+- **Egasi 2026-11-07 da tasdiqladi:** ADR-0001 (lokal model qarori).
+- **Egasi hali qilmagan:** belgilarni tekshirish (`eval/README.md`), learning note’ning shaxsiy qismlari.
 
 ## Logdagi bo‘shliqlar
 
-- **2026-11-04 va 2026-11-05:** `ai-usage/` da bu kunlar uchun hech qanday yozuv yo‘q, `ai-usage/manual.md` ham bo‘sh. PRD, TRD va ADR’lar shu kunlari commit qilingan. Ular AI yordamida yozilganmi yoki yo‘qmi — yozuvdan aniqlab bo‘lmaydi. **Egasi to‘ldiradi:** agar shu kunlari chat ilovasi yoki boshqa AI ishlatilgan bo‘lsa, promptlarni `ai-usage/manual.md` ga uning formatida qo‘shing; ishlatilmagan bo‘lsa, shu yerda yozing: ______
+- **2026-11-04 va 2026-11-05:** `ai-usage/` da bu kunlar uchun hech qanday yozuv yo‘q: hook yozuvlari ham, `ai-usage/manual.md` dagi yozuvlar ham 2026-11-06 dan boshlanadi. PRD, TRD va ADR’lar 2026-11-05 da commit qilingan. **Egasi to‘ldiradi:** agar shu kunlari chat ilovasi yoki boshqa AI ishlatilgan bo‘lsa, promptlarni `ai-usage/manual.md` ga uning formatida qo‘shing; ishlatilmagan bo‘lsa, shu yerda yozing: ______
+- **ChatGPT xarajati:** `ai-usage/manual.md` dagi 13 ta yozuvning hech birida `Usage:` qatori yo‘q (fayl formati sessiya oxirida shunday qatorni talab qiladi). **Egasi to‘ldiradi:** ilova ko‘rsatgan foydalanishni yoki “unknown” ni qo‘shing.
 - `4cccfcf6` sessiyasidagi quyidagi bosqichlar bitta sessiya ichida bo‘lgan; har bir bosqich uchun alohida xarajat yozilmagan, faqat sessiya jami bor.
 
 ## 2026-11-06 · Claude Code · Opus 5.5 · Backend rejasi va hujjatlarni ko‘rib chiqish

@@ -1,6 +1,6 @@
 # TicketLens – TRD
 
-_Bu hujjat GitHub’ga yuklangan `docs/PRD.md` ga asoslangan. F1–F12 – PRD’dagi funksional talablar. MVP’da standart LLM — Docker Compose’dagi `llm` servisi (Ollama) orqali Qwen3.6-35B-A3B; bu qaror joriy qilingan, egasining rasmiy tasdig‘i ADR-0001 dagi “Egasi uchun qaror” bandida qayd etiladi._
+_Bu hujjat GitHub’ga yuklangan `docs/PRD.md` ga asoslangan. F1–F12 – PRD’dagi funksional talablar. MVP’da standart LLM — Docker Compose’dagi `llm` servisi (Ollama) orqali Qwen3.6-35B-A3B; bu qaror joriy qilingan va egasi tomonidan 2026-11-07 da tasdiqlangan (ADR-0001)._
 
 **Qiymat belgilari:** **(o‘lchangan)** — shu loyihada haqiqiy servislarda o‘lchangan, manbasi ko‘rsatilgan; **(baho)** — hisob-kitob yoki taxmin, o‘lchanmagan; **(taklif)** — dastlabki maqsad yoki sozlama, stakeholder yoki benchmark bilan tasdiqlanadi; **(tekshirilmagan)** — da’vo hali sinab ko‘rilmagan. Barcha o‘lchovlar bitta mashinada: 20 yadroli CPU, GPU’siz, Windows’dagi WSL2 Docker (24 GB).
 

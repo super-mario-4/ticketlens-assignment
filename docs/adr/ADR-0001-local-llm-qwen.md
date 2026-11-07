@@ -2,7 +2,7 @@
 
 - **Sana:** 2026-11-05
 - **Tegishli hujjatlar:** PRD 5–9-bo‘limlar, TRD 2, 7, 9, 13-bo‘limlar
-- **Holat:** joriy qilingan (implemented). Kod, Compose va CI shu qarorga amal qiladi. Runtime o‘zgarishini (host’dagi LM Studio → Compose’dagi Ollama) egasi rasman tasdiqlashi kerak — pastdagi “Egasi uchun qaror” bandiga qarang.
+- **Holat:** qabul qilingan (2026-11-07, egasi tasdiqladi) va joriy qilingan. Kod, Compose va CI shu qarorga amal qiladi.
 
 ## Kontekst
 
@@ -61,7 +61,5 @@ Agar model PRD'dagi aniqlik, Critical recall yoki tezlik maqsadlariga erishmasa 
 
 ## Egasi uchun qaror
 
-- [ ] Runtime (Compose’dagi Ollama, `qwen3.6:35b-a3b`) va yuqoridagi natijalar asosida qarorni tasdiqlayman.
-- [ ] Standart `LLM_TIMEOUT` ni `docker-compose.yml` va `.env.example` da 120 s ga oshirish kerakmi (hozir faqat lokal `.env` da).
-
-Tasdiqlangandan keyin “Holat” qatorini “Qabul qilingan” deb yangilang va sanani yozing.
+- [x] Runtime (Compose’dagi Ollama, `qwen3.6:35b-a3b`) va yuqoridagi natijalar asosida qarorni tasdiqlayman. — egasi, 2026-11-07.
+- [ ] Standart `LLM_TIMEOUT` ni `docker-compose.yml` va `.env.example` da 120 s ga oshirish kerakmi (hozir faqat lokal `.env` da). Ochiq savol.

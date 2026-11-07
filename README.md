@@ -9,7 +9,7 @@ Batafsil: [PRD](docs/PRD.md) (mahsulot talablari), [TRD](docs/TRD.md) (texnik ye
 - CSV import (`id, channel, created_at, text, customer_id`), takroriy `id` o‘tkazib yuboriladi (idempotent).
 - Maxfiy ma’lumotni bazaga yozishdan oldin maskalash: karta raqami (oxirgi 4 raqam qoladi), CVV, karta muddati, pasport, telefon.
 - Lokal LLM orqali kategoriya, ustuvorlik, ishonch darajasi va o‘zbekcha qisqa xulosa.
-- Jamoa kategoriyadan `config/routing.yaml` bo‘yicha tanlanadi, model jamoa tanlamaydi (ADR-0004).
+- AI modeli ticket kategoriyasi va ustuvorligini aniqlaydi. Backend esa aniqlangan kategoriya asosida config/routing.yaml qoidalariga muvofiq ticketni tegishli jamoaga avtomatik yo‘naltiradi. Shu sababli jamoani tanlash jarayoni AI modeli emas, backend routing mexanizmi tomonidan boshqariladi. (ADR-0004).
 - Prompt injection evristikasi: shubhali ticket modelga yuborilmaydi va qo‘lda tekshiriladi.
 - Operator ekrani: navbat, qo‘lda tekshirish navbati, ticket sahifasi, tuzatish (tarix bilan), CSV import.
 - Rahbar statistikasi: holat, jamoa, kategoriya va ustuvorlik bo‘yicha sonlar, qo‘lda tekshirish va tuzatish ulushi.
@@ -18,14 +18,14 @@ Batafsil: [PRD](docs/PRD.md) (mahsulot talablari), [TRD](docs/TRD.md) (texnik ye
 
 ## Arxitektura va texnologiyalar
 
-| Servis | Texnologiya | Vazifa |
-| --- | --- | --- |
-| `web` | React 19, Vite, TypeScript, Tailwind CSS, shadcn/ui (Radix UI), nginx | Operator va rahbar ekrani; `/api/` so‘rovlarini `api` ga uzatadi |
-| `api` | Python 3.12, FastAPI, SQLAlchemy 2, Alembic | REST API, import, autentifikatsiya (JWT), tuzatish, statistika |
-| `worker` | Python (`api` bilan bitta kod bazasi) | Navbatdagi ticketlarni tasniflash, Elasticsearch outbox, retention |
-| `postgres` | PostgreSQL 17 | Asosiy ombor va ishlov navbati (`FOR UPDATE SKIP LOCKED`) |
-| `elasticsearch` | Elasticsearch 8.19 | Faqat maskalangan matn bo‘yicha qidiruv (ADR-0002) |
-| `llm` | Ollama 0.40, `qwen3.6:35b-a3b` | Lokal LLM, OpenAI-mos API (ADR-0001) |
+| Servis          | Texnologiya                                                           | Vazifa                                                             |
+| --------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `web`           | React 19, Vite, TypeScript, Tailwind CSS, shadcn/ui (Radix UI), nginx | Operator va rahbar ekrani; `/api/` so‘rovlarini `api` ga uzatadi   |
+| `api`           | Python 3.12, FastAPI, SQLAlchemy 2, Alembic                           | REST API, import, autentifikatsiya (JWT), tuzatish, statistika     |
+| `worker`        | Python (`api` bilan bitta kod bazasi)                                 | Navbatdagi ticketlarni tasniflash, Elasticsearch outbox, retention |
+| `postgres`      | PostgreSQL 17                                                         | Asosiy ombor va ishlov navbati (`FOR UPDATE SKIP LOCKED`)          |
+| `elasticsearch` | Elasticsearch 8.19                                                    | Faqat maskalangan matn bo‘yicha qidiruv (ADR-0002)                 |
+| `llm`           | Ollama 0.40, `qwen3.6:35b-a3b`                                        | Lokal LLM, OpenAI-mos API (ADR-0001)                               |
 
 Topshiriq talab qilgan yangi texnologiya — **Elasticsearch** ([learning note](docs/learning-note.md)). Arxitektura diagrammasi va ma’lumotlar oqimi: TRD 2- va 4-bo‘limlar.
 
@@ -70,10 +70,10 @@ docker compose up --build
 
 ## Demo foydalanuvchilar
 
-| Login | Parol (standart) | Rol | Ruxsatlar |
-| --- | --- | --- | --- |
-| `operator` | `operator` | operator | navbat, ticket, tuzatish, qayta tasniflash, CSV import |
-| `lead` | `lead` | lead | navbat, ticket ko‘rish, statistika |
+| Login      | Parol (standart) | Rol      | Ruxsatlar                                              |
+| ---------- | ---------------- | -------- | ------------------------------------------------------ |
+| `operator` | `operator`       | operator | navbat, ticket, tuzatish, qayta tasniflash, CSV import |
+| `lead`     | `lead`           | lead     | navbat, ticket ko‘rish, statistika                     |
 
 > **Ogohlantirish:** bu parollar va `JWT_SECRET` faqat lokal demo uchun. Tizimni boshqa kompyuterlar ochadigan tarmoqda ishlatishdan oldin `.env` da `OPERATOR_PASSWORD`, `LEAD_PASSWORD` va `JWT_SECRET` ni o‘zgartiring. Foydalanuvchilar faqat **birinchi** ishga tushishda yaratiladi: keyin `.env` dagi parol o‘zgarsa, mavjud foydalanuvchining paroli o‘zgarmaydi. Parolni almashtirish uchun uni birinchi ishga tushirishdan oldin o‘rnating.
 
@@ -122,13 +122,13 @@ make bench                   # eval/bench.md, saqlangan natijalardan
 
 **Joriy natija** (`eval/report.md`, prompt `v2`, 111 ta baholangan ticket):
 
-| Ko‘rsatkich | Natija | Maqsad |
-| --- | --- | --- |
-| Kategoriya aniqligi | 107/111 = 96.4% | ≥ 85% |
-| Ustuvorlik aniqligi | 92/111 = 82.9% | ≥ 80% |
-| Critical recall | 8/8 = 100% | ≥ 95% |
-| Qo‘lda tekshirishga tushgan | 3/111 = 2.7% | ≤ 15% |
-| To‘g‘ri JSON | 119/119 = 100% | ≥ 98% |
+| Ko‘rsatkich                 | Natija          | Maqsad |
+| --------------------------- | --------------- | ------ |
+| Kategoriya aniqligi         | 107/111 = 96.4% | ≥ 85%  |
+| Ustuvorlik aniqligi         | 92/111 = 82.9%  | ≥ 80%  |
+| Critical recall             | 8/8 = 100%      | ≥ 95%  |
+| Qo‘lda tekshirishga tushgan | 3/111 = 2.7%    | ≤ 15%  |
+| To‘g‘ri JSON                | 119/119 = 100%  | ≥ 98%  |
 
 **Bu natijalarga ehtiyot bo‘lib qarash kerak:**
 
@@ -140,7 +140,7 @@ make bench                   # eval/bench.md, saqlangan natijalardan
 
 ## Ma’lum cheklovlar va xavflar
 
-- **Yo‘naltirish vaqti maqsadi bajarilmagan.** PRD maqsadi — o‘rtacha 1 daqiqadan kam. 2 000 ticketli CSV bir vaqtda navbatga tushgani uchun bazada `classified_at − ingested_at` o‘rtachasi ~15.7 soat (o‘lchangan). Bu asosan navbatda kutish. Bitta ticketga model vaqti: p50 18.9 s, p95 26.9 s (3 parallel so‘rov, o‘lchangan). Kuniga 3 000 ticketlik oddiy yuklamada (125 ticket/soat, sig‘im ~620/soat) maqsad bajarilishi *kutiladi*, lekin bu o‘lchanmagan.
+- **Yo‘naltirish vaqti maqsadi bajarilmagan.** PRD maqsadi — o‘rtacha 1 daqiqadan kam. 2 000 ticketli CSV bir vaqtda navbatga tushgani uchun bazada `classified_at − ingested_at` o‘rtachasi ~15.7 soat (o‘lchangan). Bu asosan navbatda kutish. Bitta ticketga model vaqti: p50 18.9 s, p95 26.9 s (3 parallel so‘rov, o‘lchangan). Kuniga 3 000 ticketlik oddiy yuklamada (125 ticket/soat, sig‘im ~620/soat) maqsad bajarilishi _kutiladi_, lekin bu o‘lchanmagan.
 - **Ishonch darajasi kalibrlanmagan:** saqlangan 1 897 javobning hammasida 0.85–1.0, ya’ni 0.7 chegara amalda ishlamaydi; `low_confidence` holati bir marta ham uchramagan.
 - **Uskuna:** model katta RAM va disk talab qiladi; kichik mashinada ishga tushmasligi yoki swap tufayli sekinlashishi mumkin.
 - **Toza Linux mashinada tekshirilmagan:** ishga tushirish Windows’dagi WSL2 Docker’da, bo‘sh Docker daemon bilan tekshirilgan. Alohida Linux mashinada tekshirish tartibi quyida.
@@ -183,13 +183,13 @@ Hali bajarilmagan; taqdimotdan oldin tavsiya etiladi.
 
 ## Repozitoriy tuzilmasi
 
-| Yo‘l | Tarkibi |
-| --- | --- |
-| `backend/` | FastAPI ilova (`app/`), Alembic migratsiyalari, pytest testlari |
-| `web/` | React frontend (`src/app`, `src/features`, `src/shared`) |
-| `config/routing.yaml` | Kategoriya → jamoa |
-| `data/tickets.csv` | Namuna dataset (o‘zgartirilmaydi) |
-| `eval/` | Etalon belgilar, baholash va tezlik hisobotlari, tekshirish workbook’lari |
-| `docs/` | PRD, TRD, ADR, learning note, AI log |
-| `ai-usage/` | AI agentlarga berilgan promptlar logi (hook’lar yozadi) |
-| `AGENTS.md` | AI agentlar uchun ko‘rsatmalar |
+| Yo‘l                  | Tarkibi                                                                   |
+| --------------------- | ------------------------------------------------------------------------- |
+| `backend/`            | FastAPI ilova (`app/`), Alembic migratsiyalari, pytest testlari           |
+| `web/`                | React frontend (`src/app`, `src/features`, `src/shared`)                  |
+| `config/routing.yaml` | Kategoriya → jamoa                                                        |
+| `data/tickets.csv`    | Namuna dataset (o‘zgartirilmaydi)                                         |
+| `eval/`               | Etalon belgilar, baholash va tezlik hisobotlari, tekshirish workbook’lari |
+| `docs/`               | PRD, TRD, ADR, learning note, AI log                                      |
+| `ai-usage/`           | AI agentlarga berilgan promptlar logi (hook’lar yozadi)                   |
+| `AGENTS.md`           | AI agentlar uchun ko‘rsatmalar                                            |

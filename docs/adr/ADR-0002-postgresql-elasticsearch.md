@@ -2,6 +2,7 @@
 
 - **Sana:** 2026-11-05
 - **Tegishli hujjatlar:** PRD 5–9-bo‘limlar, TRD 2–6-bo‘limlar
+- **Holat:** qabul qilingan va joriy qilingan. Kod: `backend/app/search/`, `search_index_outbox` (migratsiya `0004`), `repositories/tickets.py` (`array_position` bilan tartib). Testlar haqiqiy Elasticsearch bilan: `backend/tests/test_search_index.py`.
 
 ## Kontekst
 

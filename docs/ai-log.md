@@ -1,179 +1,212 @@
 # AI log
 
-Main AI agent sessions, key prompts, cases where the agent was wrong and how that was found, and approximate token and cost usage. Exact prompts are in `ai-usage/`.
+Asosiy AI agent sessiyalari, muhim promptlar, agent xato qilgan holatlar va ular qanday aniqlangani, taxminiy token va xarajat. Promptlarning aynan matni `ai-usage/` da (hook’lar yozadi). Bu hujjatdagi har bir raqam `ai-usage/*.jsonl` dagi yozuvlardan olingan; yozuvi yo‘q narsa taxmin qilinmagan.
 
-## 2026-11-06 · Claude Code · Opus 5.5 · Backend planning and documentation review
+## Umumiy ko‘rinish
 
-**Key prompts**
+| Sessiya (`ai-usage/`) | Vosita va model | Vaqt (UTC) | Promptlar | Xarajat va tokenlar (yozuvdan) |
+| --- | --- | --- | --- | --- |
+| `2026-11-06_claude_aac7a993` | Claude Code 2.1.318 | 11-06 09:03 | 1 | $0; ish bajarilmagan (sessiya darhol yopilgan) |
+| `2026-11-06_claude_105e3fbd` | Claude Code 2.1.318 | 11-06 09:08 | 1 | $0; ish bajarilmagan |
+| `2026-11-06_claude_4cccfcf6` | Claude Code 2.1.319, Opus 5.5 (+ Haiku 5.5) | 11-06 09:15 – 20:32 | 17 | **$36.45**; Opus: 15K kirish, 610K chiqish, 195K fikrlash, 78.0M cache o‘qish, 1.07M cache yozish token; Haiku: $0.02. 11 536 qator qo‘shilgan |
+| `2026-11-07_claude_c064d082` | Claude Code, Opus 5.5 | 11-07 07:58 – davom etmoqda | 11 (shu yozuvgacha) | Sessiya hali tugamagan: `end` qatori yo‘q, xarajat **noma’lum** |
 
-- Read the specs and dataset, then propose a backend plan without writing code.
-- Review the PRD, TRD, ADRs and README against `TicketLens_Task.md` and correct them.
+Jami yozilgan xarajat: **$36.45** (faqat tugagan sessiyalar).
 
-**Outcome**
+## Kim nima qildi
 
-- Profiled `data/tickets.csv` and corrected dataset facts in the TRD.
-- Moved the LLM from host-only LM Studio into Docker Compose, pending the author's approval, to meet the one-command requirement.
-- Rewrote `README.md` as the deliverable the assignment describes.
+- **AI agent (Claude Code):** backend, frontend, testlar, Docker va CI kodi; `eval/labels.csv` dagi belgilar; baholash va benchmark ishga tushirish; PRD/TRD/ADR’ga tuzatishlar; ushbu log, README, AGENTS.md, learning note qoralamasi; tekshirish workbook’lari.
+- **Egasi (muallif):** har bir bosqich vazifasi va cheklovlari (promptlar); 2026-11-05 dagi PRD, TRD va ADR commit’lari; README’ni asl holatiga qaytarish va keyinroq (2026-11-07) o‘zbekcha README’ga ruxsat berish; ADR-0001 bo‘yicha ishlashni buyurish; ishlab turgan bazani testlardan himoya qilish talabi; `LLM_TIMEOUT=120` ga oshirish, 7 ta ticketni qayta tasniflash va konteynerlarni qayta yaratish qarori; `3765a8b` commit’i.
+- **Egasi hali qilmagan:** belgilarni tekshirish (`eval/README.md`), learning note’ning shaxsiy qismlari, ADR-0001 ni rasman tasdiqlash.
 
-**Where the agent was wrong**
+## Logdagi bo‘shliqlar
 
-- In planning, the agent suggested listing LM Studio as a README prerequisite and adding a stub for clean machines. The assignment review showed this does not meet "only Docker installed", because a stub gives no real classification.
-- The agent's first injection scan found 18 tickets. A sentence-level review of the dataset found 21.
+- **2026-11-04 va 2026-11-05:** `ai-usage/` da bu kunlar uchun hech qanday yozuv yo‘q, `ai-usage/manual.md` ham bo‘sh. PRD, TRD va ADR’lar shu kunlari commit qilingan. Ular AI yordamida yozilganmi yoki yo‘qmi — yozuvdan aniqlab bo‘lmaydi. **Egasi to‘ldiradi:** agar shu kunlari chat ilovasi yoki boshqa AI ishlatilgan bo‘lsa, promptlarni `ai-usage/manual.md` ga uning formatida qo‘shing; ishlatilmagan bo‘lsa, shu yerda yozing: ______
+- `4cccfcf6` sessiyasidagi quyidagi bosqichlar bitta sessiya ichida bo‘lgan; har bir bosqich uchun alohida xarajat yozilmagan, faqat sessiya jami bor.
 
-**Usage:** see the session's `end` line in `ai-usage/`.
+## 2026-11-06 · Claude Code · Opus 5.5 · Backend rejasi va hujjatlarni ko‘rib chiqish
 
-**Later correction:** the `README.md` rewrite above was reverted at the author's request. The file is read-only and matches the original template.
+**Muhim promptlar**
 
-## 2026-11-06 · Claude Code · Opus 5.5 · Backend foundation
+- Spec va datasetni o‘qib, kod yozmasdan backend rejasini taklif qilish.
+- PRD, TRD, ADR va README’ni `TicketLens_Task.md` bilan solishtirib tuzatish.
 
-**Key prompt**
+**Natija**
 
-- Build the backend foundation: FastAPI, PostgreSQL with SQLAlchemy 2 and Alembic, configuration, health checks and Docker, with everything run inside containers.
+- `data/tickets.csv` tahlil qilindi va TRD’dagi dataset faktlari tuzatildi.
+- “Bitta buyruq” talabini bajarish uchun LLM faqat host’dagi LM Studio’dan Docker Compose ichiga ko‘chirildi (egasi tasdig‘ini kutib).
+- `README.md` topshiriqda aytilgan deliverable sifatida qayta yozildi.
 
-**Outcome**
+**Agent qayerda xato qildi**
 
-- Added the layered FastAPI app, the Alembic baseline, and Compose services for `postgres`, `elasticsearch` and `api`, plus an on-demand `tests` service.
-- Verified a start from empty volumes with no `.env`, and stopped PostgreSQL and Elasticsearch for real to check `/api/health/ready`.
+- Rejada agent LM Studio’ni README’da shart qilib qo‘yishni va toza mashina uchun stub qo‘shishni taklif qilgan. Topshiriq bilan solishtirish bu “faqat Docker o‘rnatilgan” talabiga mos emasligini ko‘rsatdi: stub haqiqiy tasnif bermaydi.
+- Agentning birinchi injection qidiruvi 18 ta ticket topgan. Datasetni gap darajasida ko‘rib chiqish 21 tasini topdi.
 
-**Where the agent was wrong**
+**Keyingi tuzatish:** README’ni qayta yozish egasining talabi bilan bekor qilindi va fayl asl shablon holatiga qaytarildi.
 
-- Two of the first 15 tests failed because of test bugs. One password test used a value equal to the default username, and one route test read FastAPI internals that had changed. The test run in Docker exposed both.
-- The agent's first report called startup verified, but the PostgreSQL healthcheck used the Unix socket and could pass during first-time init. Starting with PostgreSQL limited to 0.1 CPU crashed the API's migration once. The healthcheck now uses TCP.
-- The agent's first clean-daemon run failed silently: `tar` read `C:` in the archive path as a remote host, no repository was copied, and the script kept polling for 25 minutes. Its log also showed `tests exit 0` when no tests had run. The author asked for a status check, the log showed the cause, and the script was rewritten to stop at the first failed step.
+## 2026-11-06 · Claude Code · Opus 5.5 · Backend asosi
 
-**Usage:** see the session's `end` line in `ai-usage/`.
+**Muhim prompt**
 
-## 2026-11-06 · Claude Code · Opus 5.5 · Ticket data model
+- Backend asosini qurish: FastAPI, SQLAlchemy 2 va Alembic bilan PostgreSQL, sozlamalar, health check’lar va Docker; hammasi konteyner ichida ishlaydi.
 
-**Key prompt**
+**Natija**
 
-- Implement the ticket data model, Alembic migration, repository and database tests, with no AI, routing or frontend work.
+- Qatlamli FastAPI ilova, Alembic boshlang‘ich migratsiyasi, `postgres`, `elasticsearch` va `api` Compose servislari hamda talab bo‘yicha ishlaydigan `tests` servisi qo‘shildi.
+- Bo‘sh volume’lardan `.env` siz ishga tushish tekshirildi; `/api/health/ready` ni tekshirish uchun PostgreSQL va Elasticsearch haqiqatan to‘xtatildi.
 
-**Outcome**
+**Agent qayerda xato qildi**
 
-- Added `users`, `import_jobs`, `tickets`, `classifications` and `corrections`, migration `0002`, and `TicketRepository`.
-- Kept category, priority and team out of `tickets`, as the TRD requires: effective values come from the latest correction, else the latest AI result.
+- Birinchi 15 ta testdan ikkitasi test xatolari tufayli yiqildi: biri standart foydalanuvchi nomiga teng parol ishlatgan, ikkinchisi o‘zgargan FastAPI ichki qismlarini o‘qigan. Docker’dagi test ishga tushirish ikkalasini ko‘rsatdi.
+- Agentning birinchi hisoboti ishga tushirishni “tekshirilgan” degan, lekin PostgreSQL healthcheck Unix socket’dan foydalangan va birinchi init paytida ham o‘tib ketishi mumkin edi. PostgreSQL 0.1 CPU bilan cheklanganda API migratsiyasi bir marta yiqildi. Endi healthcheck TCP orqali.
+- Bo‘sh daemon’dagi birinchi ishga tushirish jim yiqildi: `tar` arxiv yo‘lidagi `C:` ni masofaviy host deb o‘qidi, repozitoriy ko‘chirilmadi, skript esa 25 daqiqa kutdi. Logda testlar umuman ishlamagan bo‘lsa ham `tests exit 0` chiqdi. Egasi holatni so‘ragach log sababni ko‘rsatdi va skript birinchi xatoda to‘xtaydigan qilib qayta yozildi.
 
-**Where the agent was wrong**
+## 2026-11-06 · Claude Code · Opus 5.5 · Ticket ma’lumotlar modeli
 
-- The first `tickets` text constraint used `review_reason = 'masking_error'`. With both columns NULL it evaluated to NULL, so PostgreSQL accepted a ticket with no text and no reason. A constraint test caught it, and the check now uses `IS NOT DISTINCT FROM`.
-- One index test did not expect PostgreSQL to list the `source_ticket_id` unique constraint as an index. The Docker test run exposed it.
+**Muhim prompt**
 
-**Usage:** see the session's `end` line in `ai-usage/`.
+- Ticket ma’lumotlar modeli, Alembic migratsiyasi, repository va baza testlari; AI, routing va frontend’siz.
 
-## 2026-11-06 · Claude Code · Opus 5.5 · Ticket ingestion pipeline
+**Natija**
 
-**Key prompt**
+- `users`, `import_jobs`, `tickets`, `classifications` va `corrections` jadvallari, `0002` migratsiyasi va `TicketRepository` qo‘shildi.
+- TRD talabiga ko‘ra kategoriya, ustuvorlik va jamoa `tickets` jadvalida saqlanmaydi: amaldagi qiymat eng so‘nggi tuzatishdan, u bo‘lmasa eng so‘nggi AI natijasidan olinadi.
 
-- Implement CSV import with validation, duplicate handling, PII masking, prompt injection handling, job tracking, API endpoints and tests, with no LLM, routing or frontend work.
+**Agent qayerda xato qildi**
 
-**Outcome**
+- `tickets` matn shartining birinchi varianti `review_reason = 'masking_error'` ishlatgan. Ikkala ustun NULL bo‘lganda u NULL qaytardi va PostgreSQL matnsiz va sababsiz ticketni qabul qildi. Cheklov testi buni ushladi; endi shart `IS NOT DISTINCT FROM` ishlatadi.
+- Bitta indeks testi PostgreSQL `source_ticket_id` unique cheklovini indeks sifatida ko‘rsatishini kutmagan. Docker’dagi test buni ko‘rsatdi.
 
-- Added the `preprocess` module, `ImportService`, `POST /api/imports` and `GET /api/imports/{id}`.
-- The full dataset imports with 21 injection tickets, 82 no-content tickets and no raw sensitive data in the database, responses or logs.
+## 2026-11-06 · Claude Code · Opus 5.5 · Ticket import pipeline’i
 
-**Where the agent was wrong**
+**Muhim prompt**
 
-- The first detector found 18 of the 21 injection tickets. Comparing the count with the TRD exposed a fifth template, a Russian role change with none of the usual keywords.
-- The first card pattern took the month of a following `11/27` as extra digits, which left part of the expiry date in the text. A unit test caught it; the dataset has no such case.
-- The agent's `sed` fix did not apply, and its script still ran the end-to-end upload after the tests failed, which put 2,000 test tickets into the application database. The output showed both. The fix was redone, and the test data was removed.
+- Tekshiruv, takroriy qatorlar, PII maskalash, prompt injection, import jarayonini kuzatish, API endpoint’lar va testlar bilan CSV import; LLM, routing va frontend’siz.
 
-**Usage:** see the session's `end` line in `ai-usage/`.
+**Natija**
 
-## 2026-11-06 · Claude Code · Opus 5.5 · Multipart CSV upload
+- `preprocess` moduli, `ImportService`, `POST /api/imports` va `GET /api/imports/{id}` qo‘shildi.
+- Butun dataset 21 ta injection, 82 ta mazmunsiz ticket bilan import qilinadi; bazada, javoblarda va loglarda xom maxfiy ma’lumot yo‘q.
 
-**Key prompt**
+**Agent qayerda xato qildi**
 
-- Change `POST /api/imports` to a multipart `UploadFile` upload with a Swagger file picker, keeping the import logic, and add tests.
+- Birinchi detektor 21 ta injection ticketidan 18 tasini topgan. Sonni TRD bilan solishtirish beshinchi shablonni ko‘rsatdi: odatdagi kalit so‘zlarsiz ruscha rol almashtirish.
+- Birinchi karta naqshi keyingi `11/27` dagi oyni qo‘shimcha raqam sifatida olgan va muddatning bir qismi matnda qolgan. Unit test buni ushladi; datasetda bunday holat yo‘q.
+- Agentning `sed` tuzatishi qo‘llanmadi, skripti esa testlar yiqilgandan keyin ham end-to-end yuklashni ishga tushirdi va ilova bazasiga 2 000 ta test ticketi tushdi. Chiqish ikkalasini ko‘rsatdi. Tuzatish qayta qilindi, test ma’lumotlari o‘chirildi.
 
-**Outcome**
+## 2026-11-06 · Claude Code · Opus 5.5 · Multipart CSV yuklash
 
-- Added `UploadFile` and `File`, with `python-multipart` in the image. Uploads within the limit stay in memory, and a middleware stops oversized uploads as they arrive, so raw CSVs still never reach disk.
-- A headless Chromium run confirmed the Swagger file picker and a working upload through it.
+**Muhim prompt**
 
-**Where the agent was wrong**
+- `POST /api/imports` ni import mantiqini saqlab, Swagger’da fayl tanlash bilan multipart `UploadFile` ga o‘tkazish va testlar qo‘shish.
 
-- The agent ran its end-to-end check against the application database. Its script printed `rows before: 2005` and still ran unconditional `DELETE` statements, removing the imported tickets and import job history of the author, who was using the stack at the time. There was no backup. The 2,000 tickets were rebuilt from `data/tickets.csv` with new internal IDs. The job history is lost.
-- The previous `test_upload_is_not_written_to_disk` was too weak: its upload stayed under the 1 MB spooling threshold and it patched the wrong function. The new tests were checked by removing each protection and seeing them fail.
+**Natija**
 
-**Usage:** see the session's `end` line in `ai-usage/`.
+- `UploadFile` va `File` qo‘shildi, image’ga `python-multipart` kiritildi. Chegaradagi yuklamalar xotirada qoladi, middleware esa katta yuklamani kelish paytida to‘xtatadi, shuning uchun xom CSV diskka tushmaydi.
+- Headless Chromium Swagger’dagi fayl tanlash va u orqali ishlaydigan yuklashni tasdiqladi.
 
-## 2026-11-06 · Claude Code · Opus 5.5 · Classification and routing
+**Agent qayerda xato qildi**
 
-**Key prompt**
+- Agent end-to-end tekshiruvini ilova bazasiga qarshi ishlatdi. Skript `rows before: 2005` ni chiqardi-yu, baribir shartsiz `DELETE` larni bajardi va o‘sha paytda stack’dan foydalanayotgan muallifning import qilingan ticketlari va import tarixini o‘chirdi. Zaxira nusxa yo‘q edi. 2 000 ticket `data/tickets.csv` dan yangi ichki ID’lar bilan qayta tiklandi; import tarixi yo‘qoldi. Shundan keyin barcha tekshiruvlar alohida Compose loyihasida bajariladi.
+- Oldingi `test_upload_is_not_written_to_disk` juda zaif edi: yuklama 1 MB chegaradan kichik bo‘lgan va noto‘g‘ri funksiya almashtirilgan. Yangi testlar har bir himoyani olib tashlab, testning yiqilishini ko‘rish bilan tekshirildi.
 
-- Implement classification, persistence, routing, confidence handling, the processing workflow and tests. If ADR-0001 is still pending, build only the provider-independent parts and report blockers.
+## 2026-11-06 · Claude Code · Opus 5.5 · Tasniflash va routing
 
-**Outcome**
+**Muhim prompt**
 
-- ADR-0001 is still pending, so no LLM adapter, provider or `worker` service was added.
-- Added the response schema, prompt, `Classifier` interface, `config/routing.yaml`, routing decisions and `ClassificationService`. All of it was tested with a fake classifier, so it says nothing about real model quality.
+- Tasniflash, saqlash, routing, ishonch darajasi, ishlov jarayoni va testlar. ADR-0001 hali kutilayotgan bo‘lsa, faqat provayderga bog‘liq bo‘lmagan qismlarni qurish va to‘siqlarni aytish.
 
-**Where the agent was wrong**
+**Natija**
 
-- The first ticket tag escaping missed `< /ticket>` and `<ticket id="1">`, and the test written for it could not detect that. Review of the test found the gap before the stage ended.
+- ADR-0001 hali kutilayotgani uchun LLM adapteri, provayder yoki `worker` servisi qo‘shilmadi.
+- Javob sxemasi, prompt, `Classifier` interfeysi, `config/routing.yaml`, routing qarorlari va `ClassificationService` qo‘shildi. Hammasi soxta classifier bilan testlangan, shuning uchun haqiqiy model sifati haqida hech narsa aytmaydi.
 
-**Usage:** see the session's `end` line in `ai-usage/`.
+**Agent qayerda xato qildi**
 
-## 2026-11-06 · Claude Code · Opus 5.5 · LLM integration and worker
+- Ticket tegini ekranlashning birinchi varianti `< /ticket>` va `<ticket id="1">` ni o‘tkazib yuborgan, buning uchun yozilgan test esa buni aniqlay olmagan. Testni ko‘rib chiqish bosqich tugashidan oldin bo‘shliqni topdi.
 
-**Key prompt**
+## 2026-11-06 · Claude Code · Opus 5.5 · LLM integratsiyasi va worker
 
-- Implement Stage 5, following ADR-0001 exactly. No document defines stages, so this was scoped from the author's note and the Stage 4 blockers: the runtime, the adapter, the worker, the LLM status in `/api/health/ready` and the reclassify endpoint.
+**Muhim prompt**
 
-**Outcome**
+- 5-bosqichni ADR-0001 ga aniq amal qilib bajarish. Bosqichlarni hech qaysi hujjat belgilamagan, shuning uchun hajm egasining izohi va 4-bosqich to‘siqlaridan olindi: runtime, adapter, worker, `/api/health/ready` dagi LLM holati va reclassify endpoint’i.
 
-- Added the `llm` and `worker` Compose services, `LLMClassifier`, `app/worker.py` and `POST /api/tickets/{id}/reclassify`.
-- ADR-0001 still says the runtime awaits approval. The author told the agent to follow it, so the code uses what its decision names.
-- Checked against a real `ollama/ollama:0.40.15` container in a throwaway project with a tiny test model. The configured model is about 22.6 GB and cannot load in the 15.5 GB Docker here, so it has not been run.
+**Natija**
 
-**Where the agent was wrong**
+- `llm` va `worker` Compose servislari, `LLMClassifier`, `app/worker.py` va `POST /api/tickets/{id}/reclassify` qo‘shildi.
+- ADR-0001 hali runtime tasdiqni kutayotganini aytadi. Egasi agentga unga amal qilishni buyurdi, shuning uchun kod qarorda nomlangan narsani ishlatadi.
+- Kichik test modeli bilan alohida loyihada haqiqiy `ollama/ollama:0.40.15` konteyneriga qarshi tekshirildi. Sozlangan model taxminan 22.6 GB va bu yerdagi 15.5 GB’li Docker’ga sig‘madi, shuning uchun u o‘sha paytda ishga tushirilmadi.
 
-- `is_ready()` crashed on every poll during the model download, because Ollama sends `"data": null` with no models and the mocks used `[]`. 505 passing tests missed it, and only the real container showed it.
-- `get_classifier` created a new HTTP client on every `/api/health/ready` call and never closed it. Code review found this.
-- The agent started the throwaway run after a failed test run, and its first verification runs proved nothing: a failed upload left 0 tickets, so "queue drained" passed without any work. The result looked too fast, which led to the log. The script then gained checks on row counts and on stored results.
+**Agent qayerda xato qildi**
 
-**Usage:** see the session's `end` line in `ai-usage/`.
+- Model yuklanayotganda `is_ready()` har so‘rovda yiqildi: modellar yo‘qligida Ollama `"data": null` yuboradi, mock’lar esa `[]` ishlatgan. 505 ta o‘tgan test buni o‘tkazib yubordi; faqat haqiqiy konteyner ko‘rsatdi.
+- `get_classifier` har bir `/api/health/ready` chaqiruvida yangi HTTP klient yaratib, uni yopmagan. Kodni ko‘rib chiqish buni topdi.
+- Agent alohida loyihadagi tekshiruvni yiqilgan testdan keyin boshlagan va birinchi tekshiruvlar hech narsani isbotlamagan: yiqilgan yuklash 0 ta ticket qoldirgan, shuning uchun “navbat bo‘shadi” hech qanday ishsiz o‘tgan. Natija juda tez ko‘ringani logni ko‘rishga olib keldi. Skriptga qator soni va saqlangan natijalar tekshiruvi qo‘shildi.
 
-## 2026-11-06 · Claude Code · Opus 5.5 · CI and final verification
+## 2026-11-06 · Claude Code · Opus 5.5 · CI va yakuniy tekshiruv
 
-**Key prompt**
+**Muhim prompt**
 
-- Add CI, verify a clean Docker start, run all tests and the evaluation, audit the documents, and report what is incomplete without claiming unperformed work.
+- CI qo‘shish, toza Docker’da ishga tushirishni tekshirish, barcha testlar va baholashni ishga tushirish, hujjatlarni tekshirish va bajarilmagan ishni bajarilgan demasdan nima tugallanmaganini aytish.
 
-**Outcome**
+**Natija**
 
-- Added `.github/workflows/ci.yml` following TRD section 14. It passes `actionlint`, and its commands were run on an empty Docker daemon. It has not run on GitHub.
-- Corrected TRD lines that no longer matched the code after the move to multipart upload, and recorded `finished_at`.
-- The worker now logs when it starts and stops waiting for the model.
-- Not done, and not claimed: a run of the ADR-0001 model, the 50-ticket evaluation, search, the frontend and the learning note.
+- TRD 14-bo‘limga ko‘ra `.github/workflows/ci.yml` qo‘shildi. U `actionlint` dan o‘tdi va buyruqlari bo‘sh Docker daemon’da ishga tushirildi. O‘sha paytda GitHub’da ishlamagan edi. (Keyinroq: `f2e4854` commit’i uchun GitHub Actions muvaffaqiyatli o‘tdi.)
+- Multipart yuklashga o‘tgandan keyin kodga mos kelmay qolgan TRD qatorlari tuzatildi va `finished_at` qayd etildi.
+- Worker model kutishni boshlaganda va tugatganda log yozadi.
+- Bajarilmagan va bajarilgan deyilmagan: ADR-0001 modelini ishga tushirish, 50 ta ticketli baholash, qidiruv, frontend va learning note.
 
-**Where the agent was wrong**
+**Agent qayerda xato qildi**
 
-- The clean-daemon run was first too slow, then failed in `pip install`, while the model download used the connection. The agent separated this from a project fault by reproducing it, then loaded prebuilt images. That run therefore does not prove a from-scratch image build.
-- One script edit failed and the agent launched anyway. It stopped the run, corrected the line and confirmed it before launching again.
+- Bo‘sh daemon’dagi ishga tushirish avval juda sekin bo‘ldi, keyin model yuklanishi tarmoqni band qilgani uchun `pip install` da yiqildi. Agent buni qayta takrorlab loyiha xatosidan ajratdi va oldindan build qilingan image’larni yukladi. Shuning uchun o‘sha ishga tushirish image’larni noldan build qilishni isbotlamaydi.
+- Bitta skript tahriri qo‘llanmadi va agent baribir ishga tushirdi. U ishni to‘xtatib, qatorni tuzatdi va tasdiqlab, keyin qayta ishga tushirdi.
 
-**Usage:** see the session's `end` line in `ai-usage/`.
+## 2026-11-06 · Claude Code · Opus 5.5 · Haqiqiy model, baholash va qolgan funksiyalar
 
-## 2026-11-06 · Claude Code · Opus 5.5 · Real model, evaluation and remaining features
+**Muhim prompt**
 
-**Key prompt**
+- ADR-0001 modeli ishlab turgan holda 6-bosqichni davom ettirish: worker’ni kuzatish, haqiqiy pipeline va uning xatolarini tekshirish, 50 ta ticketli baholash, qolganini qurish va faqat haqiqatan bajarilganini aytish.
 
-- Continue Stage 6 with the ADR-0001 model now running: watch the worker, test the real pipeline and its errors, do the 50-ticket evaluation, build what remains, and report only what was really done.
+**Natija**
 
-**Outcome**
+- `qwen3.6:35b-a3b` birinchi marta ishga tushirildi. Oldin worker’ning aynan o‘sha so‘rovi bilan faqat o‘qiydigan sinov qilindi, chunki 60 soniyalik timeout’dan oshgan chaqiruv har bir ticketni `llm_unavailable` ga yuborardi.
+- Agent 111 ta baholanadigan va 15 ta ushlab qolinadigan ticketni model javoblarini ko‘rishdan oldin belgiladi. Belgilar agentniki, muallifniki emas, shuning uchun `eval/README.md` muallifdan ularni tekshirishni so‘raydi.
+- Login va rollar, ticket ro‘yxati, tafsilot va tuzatish API’lari, statistika, outbox orqali Elasticsearch qidiruvi, retention, web ekranlar, `make` buyruqlari va `eval/` qurildi.
+- Prompt `v1` ustuvorlik maqsadiga yetmadi (77.5%). `v2` PRD’dagi misollarni qo‘shib 82.9% ga chiqdi, lekin oldin ko‘rilgan to‘plamda, shuning uchun bu natija mustaqil emas.
 
-- Ran `qwen3.6:35b-a3b` for the first time. A read-only probe with the worker's exact request came first, because a call over the 60-second timeout would have sent every ticket to `llm_unavailable`.
-- The agent labelled 111 scored tickets and 15 held tickets, before seeing the model's answers on them. The labels are the agent's, not the author's, so `eval/README.md` asks the author to review them.
-- Built login and roles, the ticket list, detail and correction APIs, statistics, Elasticsearch search through an outbox, retention cleanup, the web screens, `make` commands and `eval/`.
-- Prompt `v1` missed the priority target at 77.5%. `v2` added the examples from the PRD and reached 82.9%, on a set already seen, so that figure is not independent.
+**Agent qayerda xato qildi**
 
-**Where the agent was wrong**
+- Birinchi hisobot yo‘qolgan karta ticketini “injection’ga bo‘ysundi” deb belgiladi. Ushlab qolingan ticketlar belgilari yo‘q edi, chunki ularni yozgan buyruq agent sezmagan holda yiqilgan, tekshiruv esa bo‘sh belgini “fraud emas” deb hisoblagan. Hisobotni o‘qish buni topdi. Tekshiruvga testlar qo‘shildi.
+- Prompt tahriri ikki gap ichida haqiqiy qator uzilishini qoldirgan va hech kim ko‘rmasdan ishga tushirilgan. Agent ishni to‘xtatib, qayta ishga tushirishdan oldin promptni model ko‘radigan ko‘rinishda chiqardi.
+- `make bench` avval soatiga 88 ticket ko‘rsatdi, chunki vaqtga worker to‘xtab turgan soatlar ham kirgan edi. Haqiqiy qiymat ~620. Agent bu bazadagi uzluksiz oraliq bilan mos kelmasligini sezdi.
+- Ikkita yiqilgan toza ishga tushirish avval buyruqni qanday ishga tushirishga bog‘landi. Haqiqiy sabab: Compose biror narsani ishga tushirishdan oldin barcha image’larni tortadi, bu 13 daqiqa 42 soniya oldi va agentning 10 daqiqalik chegarasidan oshdi.
+- Ishlab turgan servislarni xato sinash uchun o‘chirish vositaning xavfsizlik tekshiruvi tomonidan rad etildi. Alohida loyihada esa agentning qo‘shimcha worker’i umumiy modelni sekinlashtirib, ishlab turgan worker’da 3 ta read timeout keltirib chiqardi (qayta urinishda tiklandi). Kompyuterda xotira tugagani uchun test to‘xtadi, shuning uchun haqiqiy model bilan o‘chirilgan worker’ning tiklanishi kuzatilmadi.
 
-- The first report marked a lost-card ticket as "obeyed the injection". The labels for held tickets were missing, because the command that wrote them had failed without the agent noticing, and the check treated an empty label as "not fraud". Reading the report found it. The check now has tests.
-- The prompt edit left a literal line break inside two sentences, and the run started before anyone looked. The agent stopped it and printed the prompt as the model sees it before running again.
-- `make bench` first reported 88 tickets an hour, because the time included the hours the worker was stopped. The real figure was about 620. The agent noticed that it disagreed with an uninterrupted window in the database.
-- Two failed clean starts were first blamed on how the command was launched. The real cause was that Compose pulls every image before starting anything, which took 13 minutes 42 seconds and exceeded the agent's 10-minute limit.
-- Killing live services to test failures was refused by the tool's safety check. On a throwaway project instead, the agent's extra worker slowed the shared model enough to cause 3 read timeouts on the live worker, which recovered on retry. The test then stopped when the computer ran low on memory, so recovery of a killed worker was not observed with the real model.
+## 2026-11-07 · Claude Code · Opus 5.5 · Frontend refaktori, baholash audit’i, operatsion ishlar va muvofiqlik
 
-**Usage:** see the session's `end` line in `ai-usage/`.
+Sessiya `2026-11-07_claude_c064d082`; hali tugamagan, xarajat noma’lum.
+
+**Muhim promptlar**
+
+- Frontend’ni Feature-Based Architecture’ga o‘tkazish (React, TypeScript, Tailwind, shadcn/ui), barcha ekran va xatti-harakatni saqlab.
+- TRD’dagi frontend talablarini qator raqamlari bilan tekshirish; baholash bo‘yicha faqat o‘qiydigan audit.
+- Belgilarni inson tekshirishi uchun workbook va bazadagi 2 000 ticketning ikkita eksport workbook’i.
+- `llm_unavailable` va `injection_suspected` ticketlarini tekshirish; `LLM_TIMEOUT` ni 120 ga oshirish; 7 ta ticketni ketma-ket qayta tasniflash.
+- Topshiriqqa to‘liq muvofiqlik bo‘yicha qat’iy audit, keyin hujjatlarni o‘zbek tilida to‘ldirish.
+
+**Natija**
+
+- `web/src` `app/`, `features/{auth,tickets,imports,stats}/`, `shared/` tuzilmasiga o‘tkazildi; shadcn/ui komponentlari `shared/components/ui/` da. `web` image build’i (typecheck, lint, build) keshsiz qayta ishga tushirildi va o‘tdi.
+- `eval/review/labels-review.xlsx`, `eval/final-ticket-review.xlsx`, `eval/final-ticket-review-v2.xlsx` yaratildi; maskalash loyiha kodi bilan tekshirildi; belgilar va natijalar o‘zgartirilmadi.
+- 7 ta `llm_unavailable` ticket mavjud reclassify endpoint’i orqali ketma-ket qayta tasniflandi; hammasi `classified`. Injection ticketlariga tegilmadi.
+- Alohida Compose loyihasida backend: `ruff` toza, 601 ta test o‘tdi.
+- README, AGENTS.md, learning note, ushbu log, `eval/README.md`, TRD, PRD va ADR’lar o‘zbek tilida yangilandi.
+
+**Agent qayerda xato qildi yoki nimani o‘tkazib yubordi**
+
+- Frontend refaktoridan keyin agent typecheck, lint va build’ni “xotira yetarli emas” deb ishga tushirmagan va buni hisobotda ochiq aytgan. Keyin `web` image’i build qilingani ko‘rildi.
+- Birinchi statik tekshiruv skripti `export … from` ni hisobga olmagan va soxta “NO EXPORT” xatolarini bergan; tuzatilgan skript buzilgan nusxada har bir qasddan qo‘yilgan xatoni topdi.
+- `AiResultCard` da `<p>` ichida `<div>` (Badge) qolgan — noto‘g‘ri DOM ichma-ichligi; ko‘rib chiqishda topilib tuzatildi.
+- `3765a8b` commit’ida `web/src/main.tsx` yangi `@/app/App` ni import qiladi, lekin `web/src/app`, `features`, `shared` va `web/components.json` commit’ga qo‘shilmagan. Agent buni muvofiqlik ishining boshida `git status` dan topdi; GitHub Actions shu commit’da “Build all images” qadamida yiqilgani va commit’ning `web` papkasi alohida build qilinganda typecheck yiqilishi tasdiqlandi. Tuzatish (fayllarni qo‘shib commit qilish) egasiga qoldirildi, chunki agentga commit qilish taqiqlangan.
+
+**Usage:** sessiya tugaganda `ai-usage/2026-11-07_claude_c064d082.jsonl` dagi `end` qatoriga qarang.

@@ -2,6 +2,7 @@
 
 - **Sana:** 2026-11-05
 - **Tegishli hujjatlar:** PRD 5, 6, 9–11-bo‘limlar, TRD 4, 5, 8-bo‘limlar
+- **Holat:** qabul qilingan va joriy qilingan. Kod: `backend/app/preprocess/` (`mask.py`, `pipeline.py`), retention: `backend/app/services/retention.py`. Butun dataset bo‘yicha testlar: `test_whole_dataset_import_and_privacy`, `test_whole_dataset_reaches_the_index_masked`.
 
 ## Kontekst
 

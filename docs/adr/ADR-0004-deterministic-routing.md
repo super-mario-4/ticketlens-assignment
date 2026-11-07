@@ -1,66 +1,68 @@
-# ADR-0004: Deterministic Rule-Based Ticket Routing
+# ADR-0004: Qoidaga asoslangan deterministik yo‘naltirish
 
-- **Date:** 2026-11-05
+- **Sana:** 2026-11-05
+- **Tegishli hujjatlar:** PRD 7-bo‘lim, TRD 5- va 7.3-bo‘limlar
+- **Holat:** qabul qilingan va joriy qilingan. Kod: `backend/app/classification/routing.py` (`decide`), `config/routing.yaml`. Testlar: `backend/tests/test_classification_rules.py`.
 
-## Context
+## Kontekst
 
-TicketLens tizimi kelib tushgan murojaatlarni tegishli support yo'nalishlariga avtomatik taqsimlashi kerak.
+TicketLens kelib tushgan murojaatlarni tegishli support jamoalariga avtomatik taqsimlashi kerak.
 
-AI modeli murojaatning kategoriyasi, ustuvorligi va ishonchlilik darajasini aniqlaydi. Biroq ticketni qaysi jamoaga yuborish qarori AI modelining erkin javobiga bog'liq bo'lmasligi kerak.
+AI modeli murojaatning kategoriyasi, ustuvorligi va ishonch darajasini aniqlaydi. Biroq ticketni qaysi jamoaga yuborish qarori modelning erkin javobiga bog‘liq bo‘lmasligi kerak.
 
-AI natijalari o'zgaruvchan bo'lishi mumkin. Shu sababli bir xil shartlarga ega ticketlar har doim bir xil routing natijasini olishi kerak.
+Model natijalari o‘zgaruvchan bo‘lishi mumkin. Shu sababli bir xil shartlarga ega ticketlar har doim bir xil yo‘naltirish natijasini olishi kerak.
 
-## Decision
+## Qaror
 
-TicketLens deterministic rule-based routing yondashuvidan foydalanadi.
+TicketLens qoidaga asoslangan deterministik yo‘naltirishdan foydalanadi. Tartib:
 
-Routing quyidagi tartibda amalga oshiriladi:
+1. Model aniqlagan `category`, `priority` va `confidence` qiymatlari sxema bo‘yicha tekshiriladi.
+2. `confidence` belgilangan chegaradan (0.7) past bo‘lsa, ticket `needs_review` holatiga o‘tadi (`low_confidence`).
+3. `category = other` bo‘lsa, ticket `needs_review` holatiga o‘tadi (`unclear`).
+4. Qolgan kategoriyalar uchun jamoa `config/routing.yaml` dan olinadi (PRD 7-bo‘lim) va ticket `classified` holatiga o‘tadi.
 
-1. AI tomonidan aniqlangan category, priority va confidence qiymatlari tekshiriladi.
-2. Confidence belgilangan threshold'dan (0.7) past bo'lsa, ticket `needs_review` holatiga o'tadi (`low_confidence`).
-3. `category = other` bo'lsa, ticket `needs_review` holatiga o'tadi (`unclear`).
-4. Qolgan kategoriyalar uchun jamoa `config/routing.yaml` dan olinadi (PRD 7-bo'lim), ticket `classified` holatiga o'tadi.
+Yo‘naltirish qoidalari konfiguratsiya orqali boshqariladi. Model to‘g‘ridan-to‘g‘ri yo‘naltirish qarorini qabul qilmaydi. Alohida umumiy jamoa yo‘q: mos kelmagan murojaatlarni operator qo‘lda tekshirish navbatida ko‘rib chiqadi. Operator tuzatishida jamoani tanlamasa, jamoa yangi kategoriyadan xuddi shu jadval bo‘yicha olinadi.
 
-Routing qoidalari konfiguratsiya orqali boshqariladi. AI modeli to'g'ridan-to'g'ri routing qarorini qabul qilmaydi. Alohida umumiy jamoa yo'q: mos kelmagan murojaatlarni operator qo'lda tekshirish navbatida ko'rib chiqadi.
+## Ko‘rib chiqilgan alternativalar
 
-## Alternatives Considered
+### 1. Jamoani model tanlaydi
 
-### 1. AI-Based Routing
+Modeldan ticket uchun to‘g‘ridan-to‘g‘ri jamoani tanlash so‘raladi.
 
-AI modelidan ticket uchun to'g'ridan-to'g'ri jamoani tanlash so'raladi.
+**Rad etildi, chunki:**
 
-**Rejected because:**
+- natijalar deterministik bo‘lmasligi mumkin;
+- noto‘g‘ri yo‘naltirish ehtimoli yuqori;
+- qarorlarni tekshirish va audit qilish qiyinlashadi.
 
-- Natijalar deterministik bo'lmasligi mumkin.
-- Noto'g'ri routing ehtimoli yuqori.
-- Qarorlarni tekshirish va audit qilish qiyinlashadi.
+### 2. Aralash yondashuv (model tavsiyasi + qoidalar)
 
-### 2. Hybrid AI and Rule-Based Routing
+Modeldan yo‘naltirish tavsiyasi olinadi, keyin qoidalar bilan tekshiriladi.
 
-AI modelidan routing tavsiyasi olinadi, keyin qoidalar orqali tekshiriladi.
+**Rad etildi, chunki:**
 
-**Rejected because:**
+- MVP uchun ortiqcha murakkablik keltiradi;
+- yo‘naltirish qarorining yagona manbasini saqlash qiyinlashadi.
 
-- MVP uchun ortiqcha murakkablik keltiradi.
-- Routing qarorining yagona manbasini saqlash qiyinlashadi.
+## Oqibatlar
 
-## Consequences
+### Ijobiy
 
-### Positive
+- Bir xil sharoitda bir xil yo‘naltirish natijasi olinadi.
+- Qoidalarni test qilish oson.
+- Qarorlar tushunarli va audit qilinadi.
+- Model almashsa ham yo‘naltirish qoidalari o‘zgarmaydi.
+- “Jamoa aniqligi” alohida model xatosi emas: u kategoriya aniqligiga teng.
+- Noto‘g‘ri yoki noaniq natijalar qo‘lda tekshirish orqali ko‘riladi.
 
-- Bir xil sharoitlarda bir xil routing natijasi olinadi.
-- Routing qoidalarini test qilish oson.
-- Qarorlar tushunarli va audit qilish mumkin.
-- AI modelining o'zgarishi routing qoidalariga ta'sir qilmaydi.
-- Noto'g'ri yoki noaniq natijalarni manual review orqali tekshirish mumkin.
+### Salbiy
 
-### Negative
-
-- Yangi kategoriyalar uchun routing qoidalarini qo'lda yangilash kerak.
+- Yangi kategoriyalar uchun qoidalarni qo‘lda yangilash kerak.
 - Murakkab holatlarda qoidalar soni ortishi mumkin.
-- AI modeli kategoriyani noto'g'ri aniqlasa, routing ham noto'g'ri bo'lishi mumkin.
+- Model kategoriyani noto‘g‘ri aniqlasa, yo‘naltirish ham noto‘g‘ri bo‘ladi.
+- **O‘lchangan cheklov:** model `confidence` qiymati kalibrlanmagan. Saqlangan 1 897 javobning hammasi 0.85–1.0 oralig‘ida, shuning uchun 2-qadam (0.7 chegara) amalda hech bir ticketni ushlab qolmagan. Noaniq ticketlar asosan 3-qadam (`other`) orqali ushlanadi. Chegara va ishonch bahosini qayta ko‘rib chiqish TRD 16-bo‘limda qayd etilgan.
 
-## Related Documents
+## Tegishli hujjatlar
 
 - [PRD](../PRD.md)
 - [TRD](../TRD.md)

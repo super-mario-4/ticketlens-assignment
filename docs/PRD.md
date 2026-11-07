@@ -177,6 +177,17 @@ Operator bunday murojaatni ko‘rib chiqadi, kategoriya, ustuvorlik va jamoani b
 
 Operator noto‘g‘ri tasniflarni tuzata olishi mezon emas, funksional talab (F7).
 
+**Joriy holat (2026-11-07; maqsadlar o‘zgartirilmagan):**
+
+| Mezon | Holat |
+| --- | --- |
+| Etalon to‘plam | 126 ta belgi bor, lekin ularni AI agent yozgan. **Muallif kamida 50 tasini tekshirmaguncha bajarilmagan** (`eval/README.md`) |
+| Kategoriya, ustuvorlik, Critical | 96.4%, 82.9%, 8/8 — agent belgilari bilan; `v2` prompt shu to‘plamda sozlangani uchun mustaqil emas |
+| Maxfiylik | Butun dataset bo‘yicha avtomatik testlar o‘tadi; bazadan eksportda xom ma’lumot topilmadi |
+| Qo‘lda tekshirishga tushganlar | 125/2 000 = 6.25% (baza) — bajarilgan |
+| Yo‘naltirish vaqti | Katta CSV import’da **bajarilmagan** (o‘rtacha ~15.7 soat, navbat tufayli); oddiy yuklamada o‘lchanmagan (TRD 10-bo‘lim) |
+| Ishga tushirish va CI | CI `f2e4854` da o‘tgan, `3765a8b` da yangi frontend fayllari commit qilinmagani uchun yiqilgan; ishga tushirish WSL2’da tekshirilgan, alohida toza Linux mashinada tekshirilmagan (TRD 13–14-bo‘limlar) |
+
 # 10. Stakeholder talablariga munosabat
 
 Support rahbari bildirgan talablar bo‘yicha qarorlar:

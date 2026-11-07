@@ -2,7 +2,7 @@
 
 - **Sana:** 2026-11-05
 - **Tegishli hujjatlar:** PRD 5–9-bo‘limlar, TRD 2, 7, 9, 13-bo‘limlar
-- **Holat:** runtime o‘zgarishi (LM Studio → Compose’dagi Ollama) muallif tasdig‘ini kutmoqda
+- **Holat:** joriy qilingan (implemented). Kod, Compose va CI shu qarorga amal qiladi. Runtime o‘zgarishini (host’dagi LM Studio → Compose’dagi Ollama) egasi rasman tasdiqlashi kerak — pastdagi “Egasi uchun qaror” bandiga qarang.
 
 ## Kontekst
 
@@ -51,3 +51,17 @@ MVP uchun Qwen3.6-35B-A3B modeli Docker Compose ichidagi `llm` servisida (Ollama
 ## Qayta ko‘rib chiqish shartlari
 
 Agar model PRD'dagi aniqlik, Critical recall yoki tezlik maqsadlariga erishmasa yoki maqsadli mashinada ishga tushmasa, boshqa modellar (jumladan kichikroq lokal model) benchmark qilinadi.
+
+## Joriy natijalar (o‘lchangan, 20 yadroli CPU, GPU’siz, WSL2)
+
+- Aniqlik (`eval/report.md`, agent belgilari bilan): kategoriya 96.4%, ustuvorlik 82.9%, Critical recall 8/8. Belgilar muallif tomonidan hali tasdiqlanmagan, shuning uchun bu natija qarorni yakuniy tasdiqlamaydi.
+- Tezlik: bittadan so‘rovda p50 9.7 s; ishlab turgan `worker` da (3 parallel so‘rov) bazadagi 1 897 javob bo‘yicha p50 18.9 s, p95 26.9 s, eng sekini 59.0 s; ~620 ticket/soat.
+- Xotira: model 22.7 GB RSS. Standart `LLM_TIMEOUT=60` bu mashinada yetmadi (7 ta `llm_unavailable`); lokal `.env` da 120 s ishlatiladi.
+- Yo‘naltirish vaqti maqsadi (o‘rtacha < 1 daqiqa) katta CSV import’da bajarilmagan; oddiy yuklamada o‘lchanmagan (TRD 10-bo‘lim). Bu yuqoridagi qayta ko‘rib chiqish shartiga tegishli: GPU’siz CPU’da kichikroq model bilan benchmark hali qilinmagan.
+
+## Egasi uchun qaror
+
+- [ ] Runtime (Compose’dagi Ollama, `qwen3.6:35b-a3b`) va yuqoridagi natijalar asosida qarorni tasdiqlayman.
+- [ ] Standart `LLM_TIMEOUT` ni `docker-compose.yml` va `.env.example` da 120 s ga oshirish kerakmi (hozir faqat lokal `.env` da).
+
+Tasdiqlangandan keyin “Holat” qatorini “Qabul qilingan” deb yangilang va sanani yozing.
